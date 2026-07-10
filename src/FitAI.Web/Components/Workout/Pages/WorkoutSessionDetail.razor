@@ -35,79 +35,43 @@
             Workout session not found.
         </MudAlert>
     }
+    lse if (_session.Status == "Completed")
+    {
+    <MudAlert Severity="Severity.Success"
+              Variant="Variant.Filled"
+              Class="mb-4">
+        Workout นี้เสร็จเรียบร้อยแล้ว
+    </MudAlert>
+
+    <MudButton Variant="Variant.Filled"
+               Color="Color.Primary"
+               OnClick="GoToSummary">
+        View Workout Summary
+    </MudButton>
+    }
     else
     {
-        <div class="d-flex justify-space-between align-start mb-4">
-            <div>
-                <MudText Typo="Typo.h4">
-                    @_session.SessionName
-                </MudText>
+    <WorkoutHeader SessionName="@_session.SessionName"
+                   SessionDate="@_session.SessionDate"
+                   StartTime="@_session.StartTime"
+                   ExerciseCount="@_session.Exercises.Count" />
 
-                <MudText Typo="Typo.body2"
-                         Color="Color.Secondary">
-                    @_session.SessionDate.ToString("dd/MM/yyyy")
-                    · @_session.Exercises.Count exercises
-                    · @_completedSets / @_totalSets sets completed
-                </MudText>
-            </div>
+    <WorkoutProgress TotalSets="@_totalSets"
+                     CompletedSets="@_completedSets"
+                     ProgressPercent="@_progressPercent" />
 
-            <MudChip T="string"
-                     Color="Color.Primary"
-                     Variant="Variant.Outlined">
-                @_progressPercent%
-            </MudChip>
-        </div>
+    @foreach (var exercise in _session.Exercises)
+    {
+        <WorkoutExerciseCard Exercise="exercise"
+                             OnCompleteSet="HandleSetCompletedAsync"
+                             OnAddSet="HandleAddSetAsync" />
+    }
 
-        <MudProgressLinear Value="@_progressPercent"
-                           Color="Color.Success"
-                           Rounded="true"
-                           Size="Size.Medium"
-                           Class="mb-5" />
-
-        @foreach (var exercise in _session.Exercises)
-        {
-            <WorkoutExerciseCard Exercise="exercise"
-                                 OnCompleteSet="HandleSetCompletedAsync"
-                                 OnAddSet="HandleAddSetAsync" />
-        }
-
-        <MudPaper Elevation="1"
-                  Class="pa-4 mt-4 finish-panel">
-            <div class="d-flex justify-space-between align-center">
-                <div>
-                    <MudText Typo="Typo.h6">
-                        Finish Workout
-                    </MudText>
-
-                    <MudText Typo="Typo.body2"
-                             Color="Color.Secondary">
-                        @_completedSets of @_totalSets sets completed
-                    </MudText>
-                </div>
-
-                <MudButton Variant="Variant.Filled"
-                           Color="Color.Success"
-                           Size="Size.Large"
-                           StartIcon="@Icons.Material.Filled.Flag"
-                           Disabled="@_isCompletingWorkout"
-                           OnClick="CompleteWorkoutAsync">
-
-                    @if (_isCompletingWorkout)
-                    {
-                        <MudProgressCircular Indeterminate="true"
-                                             Size="Size.Small"
-                                             Class="me-2" />
-
-                        <span>Finishing...</span>
-                    }
-                    else
-                    {
-                        <span>Finish Workout</span>
-                    }
-
-                </MudButton>
-            </div>
-        </MudPaper>
+    <WorkoutFinishPanel TotalSets="@_totalSets"
+                        CompletedSets="@_completedSets"
+                        TotalVolume="@CalculateCurrentVolume()"
+                        IsCompleting="@_isCompletingWorkout"
+                        OnFinish="CompleteWorkoutAsync" />
     }
 
 </MudContainer>
@@ -300,5 +264,19 @@
     {
         NavigationManager.NavigateTo(
             $"/workout/summary/{WorkoutSessionId}");
+    }
+    private decimal CalculateCurrentVolume()
+    {
+        if (_session is null)
+        {
+            return 0;
+        }
+
+        return _session.Exercises
+            .SelectMany(x => x.Sets)
+            .Where(x => x.IsCompleted && !x.IsSkipped)
+            .Sum(x =>
+                (x.ActualWeightKg ?? 0)
+                * (x.ActualReps ?? 0));
     }
 }

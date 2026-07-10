@@ -1,0 +1,53 @@
+﻿<MudPaper Elevation="0"
+          Class="workout-progress pa-4 mb-4">
+
+    <div class="d-flex justify-space-between align-center mb-2">
+        <div>
+            <MudText Typo="Typo.subtitle1">
+                Workout Progress
+            </MudText>
+
+            <MudText Typo="Typo.body2"
+                     Color="Color.Secondary">
+                @CompletedSets / @TotalSets sets completed
+            </MudText>
+        </div>
+
+        <MudText Typo="Typo.h6"
+                 Color="@GetProgressColor()">
+            @ProgressPercent%
+        </MudText>
+    </div>
+
+    <MudProgressLinear Value="@ProgressPercent"
+                       Color="@GetProgressColor()"
+                       Rounded="true"
+                       Size="Size.Medium" />
+
+</MudPaper>
+
+@code {
+    [Parameter]
+    public int TotalSets { get; set; }
+
+    [Parameter]
+    public int CompletedSets { get; set; }
+
+    [Parameter]
+    public double ProgressPercent { get; set; }
+
+    private Color GetProgressColor()
+    {
+        if (ProgressPercent >= 100)
+        {
+            return Color.Success;
+        }
+
+        if (ProgressPercent >= 50)
+        {
+            return Color.Primary;
+        }
+
+        return Color.Info;
+    }
+}
