@@ -1,0 +1,88 @@
+﻿@page "/workout/start"
+@rendermode InteractiveServer
+
+@using FitAI.Application.Features.WorkoutTemplates
+@using FitAI.Application.Features.WorkoutSessions
+@inject IWorkoutTemplateQueryService TemplateQueryService
+@inject IWorkoutSessionService WorkoutSessionService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Start Workout</PageTitle>
+
+<h1>Start Workout</h1>
+
+@if (_isLoading)
+{
+    <p>Loading workout templates...</p>
+}
+else if (!string.IsNullOrWhiteSpace(_errorMessage))
+{
+    <pre style="color:red">@_errorMessage</pre>
+}
+else
+{
+    <div class="row g-3">
+        @foreach (var day in _days)
+        {
+            <div class="col-md-4">
+                <div class="card p-3">
+                    <h4>@day.Name</h4>
+                    <p>@day.DayType</p>
+
+                    <button class="btn btn-primary"
+                            disabled="@_isStarting"
+                            @onclick="() => StartWorkoutAsync(day.Id)">
+                        Start Workout
+                    </button>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private bool _isLoading = true;
+    private bool _isStarting;
+    private string? _errorMessage;
+    private IReadOnlyList<WorkoutTemplateDayDto> _days = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _days = await TemplateQueryService.GetTemplateDaysAsync();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.ToString();
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task StartWorkoutAsync(Guid workoutTemplateDayId)
+    {
+        try
+        {
+            _isStarting = true;
+
+            var result = await WorkoutSessionService.StartAsync(
+                new StartWorkoutSessionCommand
+                {
+                    WorkoutTemplateDayId = workoutTemplateDayId
+                });
+
+            NavigationManager.NavigateTo($"/workout/session/{result.WorkoutSessionId}");
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.ToString();
+        }
+        finally
+        {
+            _isStarting = false;
+        }
+    }
+}

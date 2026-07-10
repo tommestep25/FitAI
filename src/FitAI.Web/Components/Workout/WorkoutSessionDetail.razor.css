@@ -1,0 +1,6 @@
+.finish-panel {
+    border-radius: 16px;
+    position: sticky;
+    bottom: 16px;
+    z-index: 5;
+}

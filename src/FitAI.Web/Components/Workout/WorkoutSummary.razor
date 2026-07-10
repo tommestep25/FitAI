@@ -1,0 +1,213 @@
+﻿@page "/workout/summary/{WorkoutSessionId:guid}"
+@rendermode InteractiveServer
+
+@using FitAI.Application.Features.WorkoutSessionDetail
+
+@inject IWorkoutSessionDetailQueryService SessionQueryService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Workout Summary</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium"
+              Class="py-6">
+
+    @if (_isLoading)
+    {
+        <div class="d-flex justify-center py-8">
+            <MudProgressCircular Indeterminate="true"
+                                 Color="Color.Primary" />
+        </div>
+    }
+    else if (!string.IsNullOrWhiteSpace(_errorMessage))
+    {
+        <MudAlert Severity="Severity.Error">
+            @_errorMessage
+        </MudAlert>
+    }
+    else if (_session is null)
+    {
+        <MudAlert Severity="Severity.Warning">
+            Workout session not found.
+        </MudAlert>
+    }
+    else
+    {
+        <MudPaper Elevation="2"
+                  Class="pa-5 summary-card">
+
+            <div class="text-center mb-5">
+                <MudIcon Icon="@Icons.Material.Filled.EmojiEvents"
+                         Color="Color.Warning"
+                         Size="Size.Large" />
+
+                <MudText Typo="Typo.h4"
+                         Class="mt-2">
+                    Workout Completed
+                </MudText>
+
+                <MudText Typo="Typo.body1"
+                         Color="Color.Secondary">
+                    @_session.SessionName
+                </MudText>
+            </div>
+
+            <MudGrid Spacing="3">
+
+                <MudItem xs="6" sm="3">
+                    <div class="summary-stat">
+                        <MudText Typo="Typo.caption"
+                                 Color="Color.Secondary">
+                            Exercises
+                        </MudText>
+
+                        <MudText Typo="Typo.h5">
+                            @_session.Exercises.Count
+                        </MudText>
+                    </div>
+                </MudItem>
+
+                <MudItem xs="6" sm="3">
+                    <div class="summary-stat">
+                        <MudText Typo="Typo.caption"
+                                 Color="Color.Secondary">
+                            Completed Sets
+                        </MudText>
+
+                        <MudText Typo="Typo.h5">
+                            @_completedSets
+                        </MudText>
+                    </div>
+                </MudItem>
+
+                <MudItem xs="6" sm="3">
+                    <div class="summary-stat">
+                        <MudText Typo="Typo.caption"
+                                 Color="Color.Secondary">
+                            Total Volume
+                        </MudText>
+
+                        <MudText Typo="Typo.h5">
+                            @_totalVolume.ToString("N0") kg
+                        </MudText>
+                    </div>
+                </MudItem>
+
+                <MudItem xs="6" sm="3">
+                    <div class="summary-stat">
+                        <MudText Typo="Typo.caption"
+                                 Color="Color.Secondary">
+                            Date
+                        </MudText>
+
+                        <MudText Typo="Typo.h6">
+                            @_session.SessionDate.ToString("dd/MM/yyyy")
+                        </MudText>
+                    </div>
+                </MudItem>
+
+            </MudGrid>
+
+            <MudDivider Class="my-5" />
+
+            @foreach (var exercise in _session.Exercises)
+            {
+                <div class="mb-4">
+                    <MudText Typo="Typo.h6">
+                        @exercise.ExerciseName
+                    </MudText>
+
+                    <MudText Typo="Typo.body2"
+                             Color="Color.Secondary">
+                        @exercise.Sets.Count(x => x.IsCompleted) completed sets
+                    </MudText>
+
+                    @foreach (var set in exercise.Sets.Where(x => x.IsCompleted))
+                    {
+                        <div class="summary-set-row">
+                            <span>Set @set.SetNumber</span>
+
+                            <span>
+                                @(set.ActualWeightKg?.ToString("0.##") ?? "0")
+                                kg ×
+                                @(set.ActualReps?.ToString() ?? "0")
+                            </span>
+
+                            <span>
+                                RPE @(set.Rpe?.ToString("0.#") ?? "-")
+                            </span>
+                        </div>
+                    }
+                </div>
+            }
+
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       FullWidth="true"
+                       Size="Size.Large"
+                       StartIcon="@Icons.Material.Filled.Home"
+                       OnClick="GoToDashboard">
+                Back to Dashboard
+            </MudButton>
+
+        </MudPaper>
+    }
+
+</MudContainer>
+
+@code {
+    [Parameter]
+    public Guid WorkoutSessionId { get; set; }
+
+    private bool _isLoading = true;
+    private string? _errorMessage;
+    private WorkoutSessionDetailDto? _session;
+
+    private int _completedSets;
+    private decimal _totalVolume;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        try
+        {
+            _isLoading = true;
+            _errorMessage = null;
+
+            _session = await SessionQueryService.GetAsync(
+                WorkoutSessionId);
+
+            CalculateSummary();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.ToString();
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private void CalculateSummary()
+    {
+        if (_session is null)
+        {
+            return;
+        }
+
+        var completedSets = _session.Exercises
+            .SelectMany(x => x.Sets)
+            .Where(x => x.IsCompleted && !x.IsSkipped)
+            .ToList();
+
+        _completedSets = completedSets.Count;
+
+        _totalVolume = completedSets.Sum(x =>
+            (x.ActualWeightKg ?? 0)
+            * (x.ActualReps ?? 0));
+    }
+
+    private void GoToDashboard()
+    {
+        NavigationManager.NavigateTo("/");
+    }
+}

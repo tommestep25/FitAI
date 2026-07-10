@@ -1,0 +1,64 @@
+﻿@page "/exercises"
+@using FitAI.Application.Features.Exercises
+@inject IExerciseQueryService ExerciseQueryService
+
+<PageTitle>Exercises</PageTitle>
+
+<h1>Workout Exercises</h1>
+
+@if (_isLoading)
+{
+    <p>Loading exercises...</p>
+}
+else if (!string.IsNullOrWhiteSpace(_errorMessage))
+{
+    <pre style="color:red">@_errorMessage</pre>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Exercise</th>
+                <th>Sets</th>
+                <th>Reps</th>
+                <th>Rest</th>
+                <th>Tempo</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in _exercises)
+            {
+                <tr>
+                    <td>@item.Name</td>
+                    <td>@item.DefaultSets</td>
+                    <td>@item.DefaultMinReps-@item.DefaultMaxReps</td>
+                    <td>@item.DefaultRestSeconds sec</td>
+                    <td>@item.Tempo</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private bool _isLoading = true;
+    private string? _errorMessage;
+    private IReadOnlyList<ExerciseDto> _exercises = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _exercises = await ExerciseQueryService.GetExercisesAsync();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.ToString();
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+}

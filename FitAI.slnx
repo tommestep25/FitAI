@@ -1,0 +1,18 @@
+<Solution>
+  <Folder Name="/database/" />
+  <Folder Name="/docker/" />
+  <Folder Name="/docs/" />
+  <Folder Name="/scripts/" />
+  <Folder Name="/Solution Items/">
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/FitAI.Application/FitAI.Application.csproj" Id="3fde16bd-7d18-4a71-ac79-8f3e41fe6202" />
+    <Project Path="src/FitAI.Domain/FitAI.Domain.csproj" Id="dd7a0462-5960-4d25-89bf-8ac544cf88eb" />
+    <Project Path="src/FitAI.Infrastructure/FitAI.Infrastructure.csproj" Id="d9e0f450-2a0f-4b99-bcbf-1668c95e7b13" />
+  </Folder>
+  <Folder Name="/tests/" />
+  <Project Path="FitAI.TestConnection/FitAI.TestConnection.csproj" Id="0208b35c-d215-4d52-bee2-b2b1148a8f4c" />
+  <Project Path="src/FitAI.Web/FitAI.Web.csproj" Id="ad4b4a2d-d937-45a7-bc10-7bca9d8ec9dd" />
+</Solution>

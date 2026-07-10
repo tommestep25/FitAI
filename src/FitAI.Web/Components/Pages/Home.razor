@@ -1,0 +1,78 @@
+﻿@page "/"
+@using FitAI.Application.Features.Dashboard
+@inject IDashboardQueryService DashboardQueryService
+
+<PageTitle>FitAI Dashboard</PageTitle>
+
+<h1>FitAI Dashboard</h1>
+
+@if (_isLoading)
+{
+    <p>Loading dashboard...</p>
+}
+else if (!string.IsNullOrWhiteSpace(_errorMessage))
+{
+    <pre style="color:red">@_errorMessage</pre>
+}
+else if (_dashboard is null)
+{
+    <p>No user data found.</p>
+}
+else
+{
+    <div class="row g-3">
+        <div class="col-md-3">
+            <div class="card p-3">
+                <h5>Weight</h5>
+                <h2>@_dashboard.LatestInBodyWeightKg kg</h2>
+                <small>Goal: @_dashboard.GoalWeightKg kg</small>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card p-3">
+                <h5>Body Fat</h5>
+                <h2>@_dashboard.LatestBodyFatPercentage%</h2>
+                <small>Target: 18-20%</small>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card p-3">
+                <h5>SMM</h5>
+                <h2>@_dashboard.LatestSkeletalMuscleMassKg kg</h2>
+                <small>Goal: maintain ≥ 34 kg</small>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card p-3">
+                <h5>Protein</h5>
+                <h2>@_dashboard.ProteinGoalG g</h2>
+                <small>Daily target</small>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private bool _isLoading = true;
+    private string? _errorMessage;
+    private DashboardSummaryDto? _dashboard;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _dashboard = await DashboardQueryService.GetDashboardAsync();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.ToString();
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+}

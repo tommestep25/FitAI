@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
+  </PropertyGroup>
+	<ItemGroup>
+		<PackageReference Include="MudBlazor" />
+		<PackageReference Include="Serilog.AspNetCore" />
+		<PackageReference Include="Serilog.Sinks.Console" />
+		<PackageReference Include="Serilog.Sinks.File" />
+	</ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\FitAI.Application\FitAI.Application.csproj" />
+    <ProjectReference Include="..\FitAI.Infrastructure\FitAI.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

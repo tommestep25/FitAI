@@ -1,0 +1,236 @@
+﻿@using FitAI.Application.Features.WorkoutSessionDetail
+
+<MudPaper Elevation="1"
+          Class="workout-card pa-4 mb-4">
+
+    <div class="d-flex justify-space-between align-start mb-2">
+        <div>
+            <MudText Typo="Typo.h6">
+                @Exercise.ExerciseName
+            </MudText>
+
+            <MudText Typo="Typo.body2"
+                     Color="Color.Secondary">
+                @BuildExerciseDescription()
+            </MudText>
+        </div>
+
+        @if (Exercise.IsCompleted)
+        {
+            <MudChip T="string"
+                     Size="Size.Small"
+                     Color="Color.Success"
+                     Variant="Variant.Filled">
+                Completed
+            </MudChip>
+        }
+        else
+        {
+            <MudChip T="string"
+                     Size="Size.Small"
+                     Color="Color.Default"
+                     Variant="Variant.Outlined">
+                In progress
+            </MudChip>
+        }
+    </div>
+
+    <MudDivider Class="mb-3" />
+
+    <div class="set-grid set-grid-header">
+        <div>SET</div>
+        <div>PREVIOUS</div>
+        <div>KG</div>
+        <div>REPS</div>
+        <div>RPE</div>
+        <div></div>
+    </div>
+
+    @foreach (var set in Exercise.Sets)
+    {
+        <div class="@GetSetRowClass(set)">
+            <div class="set-number">
+                @if (set.IsWarmup)
+                {
+                    <MudChip T="string"
+                             Size="Size.Small"
+                             Color="Color.Warning"
+                             Variant="Variant.Outlined">
+                        W
+                    </MudChip>
+                }
+                else
+                {
+                    <span>@set.SetNumber</span>
+                }
+            </div>
+
+            <div class="previous-value">
+                @GetPreviousText(set)
+            </div>
+
+            <div>
+                <MudNumericField T="decimal?"
+                                 @bind-Value="set.ActualWeightKg"
+                                 Variant="Variant.Outlined"
+                                 Margin="Margin.Dense"
+                                 HideSpinButtons="true"
+                                 Min="0"
+                                 Step="0.5M"
+                                 Immediate="true"
+                                 Disabled="@set.IsCompleted"
+                                 Placeholder="kg" />
+            </div>
+
+            <div>
+                <MudNumericField T="int?"
+                                 @bind-Value="set.ActualReps"
+                                 Variant="Variant.Outlined"
+                                 Margin="Margin.Dense"
+                                 HideSpinButtons="true"
+                                 Min="0"
+                                 Max="100"
+                                 Immediate="true"
+                                 Disabled="@set.IsCompleted"
+                                 Placeholder="reps" />
+            </div>
+
+            <div>
+                <MudNumericField T="decimal?"
+                                 @bind-Value="set.Rpe"
+                                 Variant="Variant.Outlined"
+                                 Margin="Margin.Dense"
+                                 HideSpinButtons="true"
+                                 Min="1"
+                                 Max="10"
+                                 Step="0.5M"
+                                 Immediate="true"
+                                 Disabled="@set.IsCompleted"
+                                 Placeholder="RPE" />
+            </div>
+
+            <div class="set-action">
+                <MudIconButton Icon="@GetActionIcon(set)"
+                               Color="@GetActionColor(set)"
+                               Variant="Variant.Filled"
+                               Disabled="@(_isSaving || set.IsCompleted)"
+                               OnClick="() => CompleteSetAsync(set)" />
+            </div>
+        </div>
+    }
+
+    <div class="d-flex justify-space-between align-center mt-3">
+        <MudButton Variant="Variant.Text"
+                   Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.Add"
+                   OnClick="AddSetAsync">
+            Add Set
+        </MudButton>
+
+        <MudText Typo="Typo.caption"
+                 Color="Color.Secondary">
+            Rest @Exercise.TargetRestSeconds sec
+        </MudText>
+    </div>
+
+</MudPaper>
+
+@code {
+    [Parameter, EditorRequired]
+    public WorkoutExerciseDto Exercise { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback<WorkoutSetDto> OnCompleteSet { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid> OnAddSet { get; set; }
+
+    private bool _isSaving;
+
+    private async Task CompleteSetAsync(WorkoutSetDto set)
+    {
+        if (set.IsCompleted || _isSaving)
+        {
+            return;
+        }
+
+        if (!set.ActualWeightKg.HasValue)
+        {
+            return;
+        }
+
+        if (!set.ActualReps.HasValue || set.ActualReps <= 0)
+        {
+            return;
+        }
+
+        try
+        {
+            _isSaving = true;
+
+            set.ActualRestSeconds ??=
+                set.TargetRestSeconds
+                ?? Exercise.TargetRestSeconds;
+
+            await OnCompleteSet.InvokeAsync(set);
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    private async Task AddSetAsync()
+    {
+        if (OnAddSet.HasDelegate)
+        {
+            await OnAddSet.InvokeAsync(Exercise.WorkoutSessionExerciseId);
+        }
+    }
+
+    private string BuildExerciseDescription()
+    {
+        var targetSets = Exercise.TargetSets?.ToString() ?? "-";
+        var minReps = Exercise.TargetMinReps?.ToString() ?? "-";
+        var maxReps = Exercise.TargetMaxReps?.ToString() ?? "-";
+        var rest = Exercise.TargetRestSeconds?.ToString() ?? "-";
+
+        return $"{targetSets} sets · {minReps}-{maxReps} reps · Rest {rest} sec";
+    }
+
+    private static string GetPreviousText(WorkoutSetDto set)
+    {
+        if (set.TargetWeightKg.HasValue && set.TargetReps.HasValue)
+        {
+            return $"{set.TargetWeightKg:0.##} × {set.TargetReps}";
+        }
+
+        if (set.TargetReps.HasValue)
+        {
+            return $"{set.TargetReps} reps";
+        }
+
+        return "-";
+    }
+
+    private static string GetSetRowClass(WorkoutSetDto set)
+    {
+        return set.IsCompleted
+            ? "set-grid set-grid-row set-completed"
+            : "set-grid set-grid-row";
+    }
+
+    private static string GetActionIcon(WorkoutSetDto set)
+    {
+        return set.IsCompleted
+            ? Icons.Material.Filled.Check
+            : Icons.Material.Outlined.Check;
+    }
+
+    private static Color GetActionColor(WorkoutSetDto set)
+    {
+        return set.IsCompleted
+            ? Color.Success
+            : Color.Default;
+    }
+}

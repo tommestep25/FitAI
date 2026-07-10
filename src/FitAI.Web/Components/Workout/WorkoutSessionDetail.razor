@@ -1,0 +1,304 @@
+﻿@page "/workout/session/{WorkoutSessionId:guid}"
+@rendermode InteractiveServer
+@using FitAI.Application.Features.WorkoutSets
+@inject IWorkoutSetService WorkoutSetService
+@using FitAI.Application.Features.WorkoutSessions
+
+@inject ICompleteWorkoutService CompleteWorkoutService
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+@using FitAI.Application.Features.WorkoutSessionDetail
+@inject IWorkoutSessionDetailQueryService SessionQueryService
+
+<PageTitle>Workout Session</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large"
+              Class="py-4">
+
+    @if (_isLoading)
+    {
+        <div class="d-flex justify-center py-8">
+            <MudProgressCircular Indeterminate="true"
+                                 Color="Color.Primary" />
+        </div>
+    }
+    else if (!string.IsNullOrWhiteSpace(_errorMessage))
+    {
+        <MudAlert Severity="Severity.Error"
+                  Variant="Variant.Filled">
+            @_errorMessage
+        </MudAlert>
+    }
+    else if (_session is null)
+    {
+        <MudAlert Severity="Severity.Warning">
+            Workout session not found.
+        </MudAlert>
+    }
+    else
+    {
+        <div class="d-flex justify-space-between align-start mb-4">
+            <div>
+                <MudText Typo="Typo.h4">
+                    @_session.SessionName
+                </MudText>
+
+                <MudText Typo="Typo.body2"
+                         Color="Color.Secondary">
+                    @_session.SessionDate.ToString("dd/MM/yyyy")
+                    · @_session.Exercises.Count exercises
+                    · @_completedSets / @_totalSets sets completed
+                </MudText>
+            </div>
+
+            <MudChip T="string"
+                     Color="Color.Primary"
+                     Variant="Variant.Outlined">
+                @_progressPercent%
+            </MudChip>
+        </div>
+
+        <MudProgressLinear Value="@_progressPercent"
+                           Color="Color.Success"
+                           Rounded="true"
+                           Size="Size.Medium"
+                           Class="mb-5" />
+
+        @foreach (var exercise in _session.Exercises)
+        {
+            <WorkoutExerciseCard Exercise="exercise"
+                                 OnCompleteSet="HandleSetCompletedAsync"
+                                 OnAddSet="HandleAddSetAsync" />
+        }
+
+        <MudPaper Elevation="1"
+                  Class="pa-4 mt-4 finish-panel">
+            <div class="d-flex justify-space-between align-center">
+                <div>
+                    <MudText Typo="Typo.h6">
+                        Finish Workout
+                    </MudText>
+
+                    <MudText Typo="Typo.body2"
+                             Color="Color.Secondary">
+                        @_completedSets of @_totalSets sets completed
+                    </MudText>
+                </div>
+
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Success"
+                           Size="Size.Large"
+                           StartIcon="@Icons.Material.Filled.Flag"
+                           Disabled="@_isCompletingWorkout"
+                           OnClick="CompleteWorkoutAsync">
+
+                    @if (_isCompletingWorkout)
+                    {
+                        <MudProgressCircular Indeterminate="true"
+                                             Size="Size.Small"
+                                             Class="me-2" />
+
+                        <span>Finishing...</span>
+                    }
+                    else
+                    {
+                        <span>Finish Workout</span>
+                    }
+
+                </MudButton>
+            </div>
+        </MudPaper>
+    }
+
+</MudContainer>
+
+@code {
+    [Parameter]
+    public Guid WorkoutSessionId { get; set; }
+    private bool _isCompletingWorkout;
+    private bool _isLoading = true;
+    private string? _errorMessage;
+    private WorkoutSessionDetailDto? _session;
+
+    private int _totalSets;
+    private int _completedSets;
+    private double _progressPercent;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadSessionAsync();
+    }
+
+    private async Task LoadSessionAsync()
+    {
+        try
+        {
+            _isLoading = true;
+            _errorMessage = null;
+
+            _session = await SessionQueryService.GetAsync(
+                WorkoutSessionId);
+
+            CalculateProgress();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.ToString();
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task HandleSetCompletedAsync(
+        WorkoutSetDto set)
+    {
+        if (_session is null)
+        {
+            return;
+        }
+
+        if (!set.ActualWeightKg.HasValue
+            || !set.ActualReps.HasValue)
+        {
+            Snackbar.Add(
+                "กรุณากรอกน้ำหนักและจำนวนครั้ง",
+                Severity.Warning);
+
+            return;
+        }
+
+        try
+        {
+            var result =
+                await WorkoutSetService.CompleteSetAsync(
+                    new CompleteWorkoutSetCommand
+                    {
+                        WorkoutSetId = set.Id,
+                        ActualWeightKg =
+                            set.ActualWeightKg.Value,
+                        ActualReps =
+                            set.ActualReps.Value,
+                        Rpe = set.Rpe,
+                        ActualRestSeconds =
+                            set.ActualRestSeconds
+                            ?? set.TargetRestSeconds
+                    });
+
+            set.IsCompleted = true;
+
+            var exercise = _session.Exercises
+                .FirstOrDefault(
+                    x => x.WorkoutSessionExerciseId
+                        == result.WorkoutSessionExerciseId);
+
+            if (exercise is not null)
+            {
+                exercise.IsCompleted =
+                    result.IsExerciseCompleted;
+            }
+
+            CalculateProgress();
+
+            Snackbar.Add(
+                result.IsExerciseCompleted
+                    ? "บันทึกเซ็ตแล้ว และท่านี้เสร็จครบทุกเซ็ต"
+                    : "บันทึกเซ็ตเรียบร้อย",
+                Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add(
+                $"บันทึกไม่สำเร็จ: {ex.Message}",
+                Severity.Error);
+        }
+    }
+
+    private async Task CompleteWorkoutAsync()
+    {
+        if (_session is null || _isCompletingWorkout)
+        {
+            return;
+        }
+
+        if (_completedSets == 0)
+        {
+            Snackbar.Add(
+                "ยังไม่มีเซ็ตที่บันทึก กรุณาทำอย่างน้อย 1 เซ็ตก่อนจบการฝึก",
+                Severity.Warning);
+
+            return;
+        }
+
+        try
+        {
+            _isCompletingWorkout = true;
+
+            var result = await CompleteWorkoutService.CompleteAsync(
+                new CompleteWorkoutCommand
+                {
+                    WorkoutSessionId = WorkoutSessionId
+                });
+
+            Snackbar.Add(
+                $"Workout completed: {result.CompletedSets}/{result.TotalSets} sets, " +
+                $"Volume {result.TotalVolume:N0} kg, " +
+                $"Duration {result.DurationMinutes} min",
+                Severity.Success);
+
+            NavigationManager.NavigateTo(
+                $"/workout/summary/{result.WorkoutSessionId}");
+        }
+        catch (InvalidOperationException ex)
+        {
+            Snackbar.Add(ex.Message, Severity.Warning);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add(
+                $"ไม่สามารถจบ Workout ได้: {ex.Message}",
+                Severity.Error);
+        }
+        finally
+        {
+            _isCompletingWorkout = false;
+        }
+    }
+
+    private Task HandleAddSetAsync(Guid workoutSessionExerciseId)
+    {
+        // Sprint ถัดไปจะเพิ่ม Set ลงฐานข้อมูล
+        return Task.CompletedTask;
+    }
+
+    private void CalculateProgress()
+    {
+        if (_session is null)
+        {
+            _totalSets = 0;
+            _completedSets = 0;
+            _progressPercent = 0;
+            return;
+        }
+
+        _totalSets = _session.Exercises
+            .SelectMany(x => x.Sets)
+            .Count();
+
+        _completedSets = _session.Exercises
+            .SelectMany(x => x.Sets)
+            .Count(x => x.IsCompleted);
+
+        _progressPercent = _totalSets == 0
+            ? 0
+            : Math.Round(
+                (double)_completedSets / _totalSets * 100,
+                0);
+    }
+    private void GoToSummary()
+    {
+        NavigationManager.NavigateTo(
+            $"/workout/summary/{WorkoutSessionId}");
+    }
+}

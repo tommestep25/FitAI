@@ -1,0 +1,69 @@
+﻿.workout-card {
+    border-radius: 16px;
+}
+
+.set-grid {
+    display: grid;
+    grid-template-columns: minmax(42px, 0.45fr) minmax(85px, 1fr) minmax(80px, 1fr) minmax(75px, 0.9fr) minmax(70px, 0.8fr) minmax(44px, 0.4fr);
+    gap: 10px;
+    align-items: center;
+}
+
+.set-grid-header {
+    padding: 0 8px 8px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    opacity: 0.65;
+    text-align: center;
+}
+
+.set-grid-row {
+    padding: 8px;
+    margin-bottom: 8px;
+    border-radius: 12px;
+    transition: background-color 0.2s ease;
+}
+
+    .set-grid-row:hover {
+        background-color: rgba(127, 127, 127, 0.06);
+    }
+
+.set-completed {
+    background-color: rgba(46, 125, 50, 0.10);
+}
+
+.set-number,
+.previous-value,
+.set-action {
+    text-align: center;
+}
+
+.previous-value {
+    font-size: 0.85rem;
+    opacity: 0.7;
+}
+
+@media (max-width: 700px) {
+    .workout-card {
+        padding: 12px !important;
+    }
+
+    .set-grid {
+        grid-template-columns: 34px 54px minmax(64px, 1fr) minmax(60px, 1fr) minmax(58px, 0.85fr) 38px;
+        gap: 5px;
+    }
+
+    .set-grid-header {
+        font-size: 0.62rem;
+        padding-left: 2px;
+        padding-right: 2px;
+    }
+
+    .set-grid-row {
+        padding: 5px 2px;
+    }
+
+    .previous-value {
+        font-size: 0.68rem;
+    }
+}

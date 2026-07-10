@@ -1,0 +1,32 @@
+.summary-card {
+    border-radius: 20px;
+}
+
+.summary-stat {
+    padding: 14px;
+    text-align: center;
+    border-radius: 14px;
+    background: rgba(127, 127, 127, 0.06);
+    height: 100%;
+}
+
+.summary-set-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(127, 127, 127, 0.15);
+}
+
+    .summary-set-row span:nth-child(2),
+    .summary-set-row span:nth-child(3) {
+        text-align: right;
+    }
+
+@media (max-width: 600px) {
+    .summary-set-row {
+        grid-template-columns: 0.7fr 1.3fr 0.8fr;
+        gap: 6px;
+        font-size: 0.85rem;
+    }
+}
