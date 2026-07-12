@@ -22,4 +22,9 @@ public sealed class WorkoutSetDto
     public bool IsWarmup { get; set; }
     public bool IsCompleted { get; set; }
     public bool IsSkipped { get; set; }
+
+    // ข้อมูลจาก Workout ครั้งก่อน
+    public decimal? PreviousWeightKg { get; set; }
+    public int? PreviousReps { get; set; }
+    public decimal? PreviousRpe { get; set; }
 }

@@ -1,5 +1,59 @@
-﻿<h3>WorkoutHeader</h3>
+﻿<MudPaper Elevation="0"
+          Class="workout-header pa-4 mb-3">
+
+    <div class="d-flex justify-space-between align-start">
+        <div>
+            <MudText Typo="Typo.h4">
+                @SessionName
+            </MudText>
+
+            <MudText Typo="Typo.body2"
+                     Color="Color.Secondary">
+                @SessionDate.ToString("dd/MM/yyyy")
+                · @ExerciseCount exercises
+            </MudText>
+        </div>
+
+        @if (StartTime.HasValue)
+        {
+            <MudChip T="string"
+                     Variant="Variant.Outlined"
+                     Color="Color.Primary"
+                     StartIcon="@Icons.Material.Filled.Timer">
+                @GetElapsedTimeText()
+            </MudChip>
+        }
+    </div>
+
+</MudPaper>
 
 @code {
+    [Parameter]
+    public string SessionName { get; set; } = string.Empty;
 
+    [Parameter]
+    public DateOnly SessionDate { get; set; }
+
+    [Parameter]
+    public DateTimeOffset? StartTime { get; set; }
+
+    [Parameter]
+    public int ExerciseCount { get; set; }
+
+    private string GetElapsedTimeText()
+    {
+        if (!StartTime.HasValue)
+        {
+            return "0 min";
+        }
+
+        var elapsed = DateTimeOffset.UtcNow - StartTime.Value;
+
+        if (elapsed.TotalHours >= 1)
+        {
+            return $"{(int)elapsed.TotalHours}h {elapsed.Minutes}m";
+        }
+
+        return $"{Math.Max(0, (int)elapsed.TotalMinutes)} min";
+    }
 }

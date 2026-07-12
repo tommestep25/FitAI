@@ -46,77 +46,14 @@
         <div></div>
     </div>
 
-    @foreach (var set in Exercise.Sets)
+    @foreach (var set in Exercise.Sets.OrderBy(x => x.SetNumber))
     {
-        <div class="@GetSetRowClass(set)">
-            <div class="set-number">
-                @if (set.IsWarmup)
-                {
-                    <MudChip T="string"
-                             Size="Size.Small"
-                             Color="Color.Warning"
-                             Variant="Variant.Outlined">
-                        W
-                    </MudChip>
-                }
-                else
-                {
-                    <span>@set.SetNumber</span>
-                }
-            </div>
-
-            <div class="previous-value">
-                @GetPreviousText(set)
-            </div>
-
-            <div>
-                <MudNumericField T="decimal?"
-                                 @bind-Value="set.ActualWeightKg"
-                                 Variant="Variant.Outlined"
-                                 Margin="Margin.Dense"
-                                 HideSpinButtons="true"
-                                 Min="0"
-                                 Step="0.5M"
-                                 Immediate="true"
-                                 Disabled="@set.IsCompleted"
-                                 Placeholder="kg" />
-            </div>
-
-            <div>
-                <MudNumericField T="int?"
-                                 @bind-Value="set.ActualReps"
-                                 Variant="Variant.Outlined"
-                                 Margin="Margin.Dense"
-                                 HideSpinButtons="true"
-                                 Min="0"
-                                 Max="100"
-                                 Immediate="true"
-                                 Disabled="@set.IsCompleted"
-                                 Placeholder="reps" />
-            </div>
-
-            <div>
-                <MudNumericField T="decimal?"
-                                 @bind-Value="set.Rpe"
-                                 Variant="Variant.Outlined"
-                                 Margin="Margin.Dense"
-                                 HideSpinButtons="true"
-                                 Min="1"
-                                 Max="10"
-                                 Step="0.5M"
-                                 Immediate="true"
-                                 Disabled="@set.IsCompleted"
-                                 Placeholder="RPE" />
-            </div>
-
-            <div class="set-action">
-                <MudIconButton Icon="@GetActionIcon(set)"
-                               Color="@GetActionColor(set)"
-                               Variant="Variant.Filled"
-                               Disabled="@(_isSaving || set.IsCompleted)"
-                               OnClick="() => CompleteSetAsync(set)" />
-            </div>
-        </div>
+        <WorkoutSetRow Set="set"
+                       PreviousText="@GetPreviousText(set)"
+                       CanDelete="@CanDeleteSet(set)"
+                       OnSave="CompleteSetAsync"
+                       OnDelete="DeleteSetAsync"
+                       OnSetTypeChanged="SetTypeChangedAsync" />
     }
 
     <div class="d-flex justify-space-between align-center mt-3">
@@ -144,6 +81,11 @@
 
     [Parameter]
     public EventCallback<Guid> OnAddSet { get; set; }
+    [Parameter]
+    public EventCallback<WorkoutSetDto> OnDeleteSet { get; set; }
+
+    [Parameter]
+    public EventCallback<WorkoutSetDto> OnSetTypeChanged { get; set; }
 
     private bool _isSaving;
 
@@ -200,37 +142,41 @@
 
     private static string GetPreviousText(WorkoutSetDto set)
     {
-        if (set.TargetWeightKg.HasValue && set.TargetReps.HasValue)
+        if (set.PreviousWeightKg.HasValue
+            && set.PreviousReps.HasValue)
         {
-            return $"{set.TargetWeightKg:0.##} × {set.TargetReps}";
+            return
+                $"{set.PreviousWeightKg.Value:0.##} × " +
+                $"{set.PreviousReps.Value}";
         }
 
-        if (set.TargetReps.HasValue)
+        if (set.PreviousReps.HasValue)
         {
-            return $"{set.TargetReps} reps";
+            return $"{set.PreviousReps.Value} reps";
         }
 
         return "-";
     }
 
-    private static string GetSetRowClass(WorkoutSetDto set)
+    private bool CanDeleteSet(WorkoutSetDto set)
     {
-        return set.IsCompleted
-            ? "set-grid set-grid-row set-completed"
-            : "set-grid set-grid-row";
+        if (set.IsCompleted || Exercise.Sets.Count <= 1)
+        {
+            return false;
+        }
+
+        return set.SetNumber
+            == Exercise.Sets.Max(x => x.SetNumber);
     }
 
-    private static string GetActionIcon(WorkoutSetDto set)
+    private Task DeleteSetAsync(WorkoutSetDto set)
     {
-        return set.IsCompleted
-            ? Icons.Material.Filled.Check
-            : Icons.Material.Outlined.Check;
+        return OnDeleteSet.InvokeAsync(set);
     }
 
-    private static Color GetActionColor(WorkoutSetDto set)
+    private Task SetTypeChangedAsync(WorkoutSetDto set)
     {
-        return set.IsCompleted
-            ? Color.Success
-            : Color.Default;
+        return OnSetTypeChanged.InvokeAsync(set);
     }
+
 }

@@ -35,43 +35,48 @@
             Workout session not found.
         </MudAlert>
     }
-    lse if (_session.Status == "Completed")
+    else if (string.Equals(
+        _session.Status,
+        "Completed",
+        StringComparison.OrdinalIgnoreCase))
     {
-    <MudAlert Severity="Severity.Success"
-              Variant="Variant.Filled"
-              Class="mb-4">
-        Workout นี้เสร็จเรียบร้อยแล้ว
-    </MudAlert>
+        <MudAlert Severity="Severity.Success"
+                  Variant="Variant.Filled"
+                  Class="mb-4">
+            Workout นี้เสร็จเรียบร้อยแล้ว
+        </MudAlert>
 
-    <MudButton Variant="Variant.Filled"
-               Color="Color.Primary"
-               OnClick="GoToSummary">
-        View Workout Summary
-    </MudButton>
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Primary"
+                   OnClick="GoToSummary">
+            View Workout Summary
+        </MudButton>
     }
     else
     {
-    <WorkoutHeader SessionName="@_session.SessionName"
-                   SessionDate="@_session.SessionDate"
-                   StartTime="@_session.StartTime"
-                   ExerciseCount="@_session.Exercises.Count" />
+        <WorkoutHeader SessionName="@_session.SessionName"
+                       SessionDate="@_session.SessionDate"
+                       StartTime="@_session.StartTime"
+                       ExerciseCount="@_session.Exercises.Count" />
 
-    <WorkoutProgress TotalSets="@_totalSets"
-                     CompletedSets="@_completedSets"
-                     ProgressPercent="@_progressPercent" />
+        <WorkoutProgress TotalSets="@_totalSets"
+                         CompletedSets="@_completedSets"
+                         ProgressPercent="@_progressPercent" />
 
-    @foreach (var exercise in _session.Exercises)
-    {
-        <WorkoutExerciseCard Exercise="exercise"
-                             OnCompleteSet="HandleSetCompletedAsync"
-                             OnAddSet="HandleAddSetAsync" />
-    }
+        @foreach (var exercise in _session.Exercises)
+        {
+            <WorkoutExerciseCard Exercise="exercise"
+                                 OnCompleteSet="HandleSetCompletedAsync"
+                                 OnAddSet="HandleAddSetAsync"
+                                 OnDeleteSet="HandleDeleteSetAsync"
+                                 OnSetTypeChanged="HandleSetTypeChangedAsync" />
+        }
 
-    <WorkoutFinishPanel TotalSets="@_totalSets"
-                        CompletedSets="@_completedSets"
-                        TotalVolume="@CalculateCurrentVolume()"
-                        IsCompleting="@_isCompletingWorkout"
-                        OnFinish="CompleteWorkoutAsync" />
+        <WorkoutFinishPanel TotalSets="@_totalSets"
+                            CompletedSets="@_completedSets"
+                            TotalVolume="@CalculateCurrentVolume()"
+                            IsCompleting="@_isCompletingWorkout"
+                            OnFinish="CompleteWorkoutAsync" />
     }
 
 </MudContainer>
@@ -90,6 +95,14 @@
 
     protected override async Task OnParametersSetAsync()
     {
+        if (WorkoutSessionId == Guid.Empty)
+        {
+            _session = null;
+            _errorMessage = "Workout session ID ไม่ถูกต้อง";
+            _isLoading = false;
+            return;
+        }
+
         await LoadSessionAsync();
     }
 
@@ -99,14 +112,22 @@
         {
             _isLoading = true;
             _errorMessage = null;
+            _session = null;
 
-            _session = await SessionQueryService.GetAsync(
+            var session = await SessionQueryService.GetAsync(
                 WorkoutSessionId);
 
+            if (session is null)
+            {
+                return;
+            }
+
+            _session = session;
             CalculateProgress();
         }
         catch (Exception ex)
         {
+            _session = null;
             _errorMessage = ex.ToString();
         }
         finally
@@ -230,10 +251,131 @@
         }
     }
 
-    private Task HandleAddSetAsync(Guid workoutSessionExerciseId)
+    private async Task HandleAddSetAsync(
+        Guid workoutSessionExerciseId)
     {
-        // Sprint ถัดไปจะเพิ่ม Set ลงฐานข้อมูล
-        return Task.CompletedTask;
+        if (_session is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var result = await WorkoutSetService.AddSetAsync(
+                new AddWorkoutSetCommand
+                {
+                    WorkoutSessionExerciseId =
+                        workoutSessionExerciseId
+                });
+
+            var exercise = _session.Exercises
+                .FirstOrDefault(x =>
+                    x.WorkoutSessionExerciseId
+                        == workoutSessionExerciseId);
+
+            if (exercise is null)
+            {
+                return;
+            }
+
+            exercise.Sets.Add(new WorkoutSetDto
+            {
+                Id = result.Id,
+                SetNumber = result.SetNumber,
+                TargetReps = result.TargetReps,
+                TargetRestSeconds = result.TargetRestSeconds,
+                SetType = result.SetType,
+                IsWarmup = false,
+                IsCompleted = false,
+                IsSkipped = false
+            });
+
+            exercise.TargetSets = exercise.Sets.Count;
+
+            CalculateProgress();
+
+            Snackbar.Add(
+                $"เพิ่ม Set {result.SetNumber} แล้ว",
+                Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add(
+                $"เพิ่ม Set ไม่สำเร็จ: {ex.Message}",
+                Severity.Error);
+        }
+    }
+    private async Task HandleDeleteSetAsync(
+    WorkoutSetDto set)
+    {
+        if (_session is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await WorkoutSetService.DeleteSetAsync(
+                new DeleteWorkoutSetCommand
+                {
+                    WorkoutSetId = set.Id
+                });
+
+            var exercise = _session.Exercises
+                .FirstOrDefault(x =>
+                    x.Sets.Any(s => s.Id == set.Id));
+
+            if (exercise is null)
+            {
+                return;
+            }
+
+            exercise.Sets.Remove(set);
+            exercise.TargetSets = exercise.Sets.Count;
+
+            CalculateProgress();
+
+            Snackbar.Add(
+                "ลบ Set เรียบร้อย",
+                Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add(
+                $"ลบ Set ไม่สำเร็จ: {ex.Message}",
+                Severity.Error);
+        }
+    }
+    private async Task HandleSetTypeChangedAsync(
+    WorkoutSetDto set)
+    {
+        try
+        {
+            await WorkoutSetService.SetWarmupAsync(
+                new SetWorkoutSetTypeCommand
+                {
+                    WorkoutSetId = set.Id,
+                    IsWarmup = set.IsWarmup
+                });
+
+            Snackbar.Add(
+                set.IsWarmup
+                    ? "เปลี่ยนเป็น Warmup Set แล้ว"
+                    : "เปลี่ยนเป็น Working Set แล้ว",
+                Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            // คืนค่า UI หากบันทึกไม่สำเร็จ
+            set.IsWarmup = !set.IsWarmup;
+            set.SetType = set.IsWarmup
+                ? "Warmup"
+                : "Working";
+
+            Snackbar.Add(
+                $"เปลี่ยนประเภท Set ไม่สำเร็จ: {ex.Message}",
+                Severity.Error);
+        }
     }
 
     private void CalculateProgress()

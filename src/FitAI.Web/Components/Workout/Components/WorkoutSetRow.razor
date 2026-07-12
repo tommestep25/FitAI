@@ -1,5 +1,180 @@
-﻿<h3>WorkoutSetRow</h3>
+﻿@using FitAI.Application.Features.WorkoutSessionDetail
+
+<div class="@GetRowClass()">
+
+    <div class="set-number">
+        <MudMenu Dense="true"
+                 Icon="@GetSetIcon()"
+                 Color="@GetSetColor()"
+                 Disabled="@Set.IsCompleted">
+
+            <MudMenuItem OnClick="SetWorkingAsync">
+                Working Set
+            </MudMenuItem>
+
+            <MudMenuItem OnClick="SetWarmupAsync">
+                Warmup Set
+            </MudMenuItem>
+
+            @if (CanDelete)
+            {
+                <MudMenuItem OnClick="DeleteAsync"
+                             Icon="@Icons.Material.Filled.Delete"
+                             IconColor="Color.Error">
+                    Delete Set
+                </MudMenuItem>
+            }
+
+        </MudMenu>
+    </div>
+
+    <div class="previous-column">
+        @if (Set.PreviousRpe.HasValue)
+        {
+            <MudTooltip Text="@($"Previous RPE {Set.PreviousRpe:0.#}")">
+                <span>@PreviousText</span>
+            </MudTooltip>
+        }
+        else
+        {
+            <span>@PreviousText</span>
+        }
+    </div>
+
+    <div>
+        <MudNumericField T="decimal?"
+                         @bind-Value="Set.ActualWeightKg"
+                         Immediate="true"
+                         Variant="Variant.Outlined"
+                         Margin="Margin.Dense"
+                         HideSpinButtons="true"
+                         Min="0"
+                         Step="0.5M"
+                         Disabled="@Set.IsCompleted" />
+    </div>
+
+    <div>
+        <MudNumericField T="int?"
+                         @bind-Value="Set.ActualReps"
+                         Immediate="true"
+                         Variant="Variant.Outlined"
+                         Margin="Margin.Dense"
+                         HideSpinButtons="true"
+                         Min="0"
+                         Disabled="@Set.IsCompleted" />
+    </div>
+
+    <div>
+        <MudNumericField T="decimal?"
+                         @bind-Value="Set.Rpe"
+                         Immediate="true"
+                         Variant="Variant.Outlined"
+                         Margin="Margin.Dense"
+                         HideSpinButtons="true"
+                         Min="1"
+                         Max="10"
+                         Step="0.5M"
+                         Disabled="@Set.IsCompleted" />
+    </div>
+
+    <div>
+        <MudIconButton Icon="@ButtonIcon"
+                       Color="@ButtonColor"
+                       Variant="Variant.Filled"
+                       Disabled="@Set.IsCompleted"
+                       OnClick="SaveClicked" />
+    </div>
+
+</div>
 
 @code {
+    [Parameter, EditorRequired]
+    public WorkoutSetDto Set { get; set; } = default!;
 
+    [Parameter]
+    public string PreviousText { get; set; } = "-";
+
+    [Parameter]
+    public bool CanDelete { get; set; }
+
+    [Parameter]
+    public EventCallback<WorkoutSetDto> OnSave { get; set; }
+
+    [Parameter]
+    public EventCallback<WorkoutSetDto> OnDelete { get; set; }
+
+    [Parameter]
+    public EventCallback<WorkoutSetDto> OnSetTypeChanged { get; set; }
+
+    private Task SaveClicked()
+    {
+        return OnSave.InvokeAsync(Set);
+    }
+
+    private Task DeleteAsync()
+    {
+        return OnDelete.InvokeAsync(Set);
+    }
+
+    private async Task SetWarmupAsync()
+    {
+        if (Set.IsWarmup)
+        {
+            return;
+        }
+
+        Set.IsWarmup = true;
+        Set.SetType = "Warmup";
+
+        await OnSetTypeChanged.InvokeAsync(Set);
+    }
+
+    private async Task SetWorkingAsync()
+    {
+        if (!Set.IsWarmup)
+        {
+            return;
+        }
+
+        Set.IsWarmup = false;
+        Set.SetType = "Working";
+
+        await OnSetTypeChanged.InvokeAsync(Set);
+    }
+
+    private string GetRowClass()
+    {
+        if (Set.IsCompleted)
+        {
+            return "set-row completed";
+        }
+
+        return Set.IsWarmup
+            ? "set-row warmup"
+            : "set-row";
+    }
+
+    private string GetSetIcon()
+    {
+        return Set.IsWarmup
+            ? Icons.Material.Filled.Whatshot
+            : Set.SetNumber.ToString();
+    }
+
+    private Color GetSetColor()
+    {
+        return Set.IsWarmup
+            ? Color.Warning
+            : Color.Default;
+    }
+
+    private string ButtonIcon =>
+        Set.IsCompleted
+            ? Icons.Material.Filled.Check
+            : Icons.Material.Outlined.Check;
+
+    private Color ButtonColor =>
+        Set.IsCompleted
+            ? Color.Success
+            : Color.Default;
 }
