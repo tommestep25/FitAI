@@ -17,6 +17,5 @@ public sealed class WorkoutExerciseDto
 
     public bool IsCompleted { get; set; }
 
-    public IReadOnlyList<WorkoutSetDto> Sets { get; set; }
-        = [];
+    public List<WorkoutSetDto> Sets { get; set; } = [];
 }
