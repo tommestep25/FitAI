@@ -1,4 +1,7 @@
 ﻿@page "/exercises"
+@attribute [Authorize]
+@rendermode InteractiveServer
+
 @using FitAI.Application.Features.Exercises
 @inject IExerciseQueryService ExerciseQueryService
 

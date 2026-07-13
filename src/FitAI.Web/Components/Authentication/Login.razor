@@ -1,5 +1,118 @@
-﻿<h3>Login</h3>
+﻿@page "/login"
+@rendermode InteractiveServer
+
+@using Microsoft.AspNetCore.WebUtilities
+@inject NavigationManager NavigationManager
+
+<PageTitle>Login | FitAI</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Small"
+              Class="py-8">
+
+    <MudPaper Elevation="2"
+              Class="pa-6 login-card">
+
+        <MudText Typo="Typo.h4"
+                 Align="Align.Center"
+                 Class="mb-2">
+            FitAI
+        </MudText>
+
+        <MudText Typo="Typo.body1"
+                 Color="Color.Secondary"
+                 Align="Align.Center"
+                 Class="mb-5">
+            Sign in to continue your training
+        </MudText>
+
+        @if (!string.IsNullOrWhiteSpace(_errorMessage))
+        {
+            <MudAlert Severity="Severity.Error"
+                      Class="mb-4">
+                @_errorMessage
+            </MudAlert>
+        }
+
+        <form method="post"
+              action="/account/login">
+
+            <AntiforgeryToken />
+
+            <input type="hidden"
+                   name="ReturnUrl"
+                   value="@_returnUrl" />
+
+            <div class="mb-3">
+                <label class="form-label">
+                    Email
+                </label>
+
+                <input type="email"
+                       name="Email"
+                       class="form-control"
+                       autocomplete="email"
+                       required />
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label">
+                    Password
+                </label>
+
+                <input type="password"
+                       name="Password"
+                       class="form-control"
+                       autocomplete="current-password"
+                       required />
+            </div>
+
+            <MudButton ButtonType="ButtonType.Submit"
+                       Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       Size="Size.Large"
+                       FullWidth="true">
+                Login
+            </MudButton>
+
+        </form>
+
+    </MudPaper>
+
+</MudContainer>
 
 @code {
+    private string _returnUrl = "/";
+    private string? _errorMessage;
 
+    protected override void OnInitialized()
+    {
+        var uri = NavigationManager.ToAbsoluteUri(
+            NavigationManager.Uri);
+
+        var query = QueryHelpers.ParseQuery(uri.Query);
+
+        if (query.TryGetValue(
+                "returnUrl",
+                out var returnUrl)
+            && !string.IsNullOrWhiteSpace(returnUrl))
+        {
+            _returnUrl = returnUrl.ToString();
+        }
+
+        if (!query.TryGetValue("error", out var error))
+        {
+            return;
+        }
+
+        _errorMessage = error.ToString() switch
+        {
+            "invalid_credentials" =>
+                "อีเมลหรือรหัสผ่านไม่ถูกต้อง",
+
+            "missing_credentials" =>
+                "กรุณากรอกอีเมลและรหัสผ่าน",
+
+            _ => "ไม่สามารถเข้าสู่ระบบได้"
+        };
+    }
 }

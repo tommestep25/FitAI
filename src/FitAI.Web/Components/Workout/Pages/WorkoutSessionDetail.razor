@@ -1,5 +1,7 @@
 ﻿@page "/workout/session/{WorkoutSessionId:guid}"
+@attribute [Authorize]
 @rendermode InteractiveServer
+
 @using FitAI.Application.Features.WorkoutSets
 @inject IWorkoutSetService WorkoutSetService
 @using FitAI.Application.Features.WorkoutSessions

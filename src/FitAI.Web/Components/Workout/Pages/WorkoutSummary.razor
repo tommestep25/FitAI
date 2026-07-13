@@ -1,4 +1,5 @@
 ﻿@page "/workout/summary/{WorkoutSessionId:guid}"
+@attribute [Authorize]
 @rendermode InteractiveServer
 
 @using FitAI.Application.Features.WorkoutSessionDetail

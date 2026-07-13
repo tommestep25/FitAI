@@ -1,22 +1,22 @@
 ﻿using FitAI.Application.Common.Interfaces;
+using FitAI.Application.Common.Security;
 using FitAI.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace FitAI.Application.Features.WorkoutSessions;
 
-public sealed class WorkoutSessionService(IApplicationDbContext context)
+public sealed class WorkoutSessionService(
+    IApplicationDbContext context,
+    ICurrentUserService currentUserService)
     : IWorkoutSessionService
 {
     public async Task<StartWorkoutSessionResult> StartAsync(
         StartWorkoutSessionCommand command,
         CancellationToken cancellationToken = default)
     {
-        var user = await context.Users
-            .AsNoTracking()
-            .Where(x => x.IsActive && !x.IsDeleted)
-            .OrderBy(x => x.CreatedAt)
-            .FirstOrDefaultAsync(cancellationToken)
-            ?? throw new InvalidOperationException("User not found.");
+        var userId =
+    await currentUserService.GetRequiredUserIdAsync(
+        cancellationToken);
 
         var templateDay = await context.WorkoutTemplateDays
             .AsNoTracking()
@@ -43,7 +43,7 @@ public sealed class WorkoutSessionService(IApplicationDbContext context)
         var session = new WorkoutSession
         {
             Id = Guid.NewGuid(),
-            UserId = user.Id,
+            UserId = userId,
 
             // ไม่ใช่ workout.workout_days
             WorkoutDayId = null,
@@ -52,6 +52,7 @@ public sealed class WorkoutSessionService(IApplicationDbContext context)
             SessionDate = DateOnly.FromDateTime(now.UtcDateTime),
             StartTime = now,
             SessionName = templateDay.Name,
+            Status = "InProgress",
             CreatedAt = now
         };
 
