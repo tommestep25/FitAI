@@ -4,15 +4,12 @@ using FitAI.Application;
 using MudBlazor.Services;
 using FitAI.Web.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
-using FitAI.Application.Common.Security;
+using FitAI.Application.Common.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
-
 builder.Services.AddMudServices();
-
-builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddApplication();
 
@@ -21,6 +18,9 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddScoped<
     ICurrentUserService,
     CurrentUserService>();
+
+builder.Services.AddScoped<
+    SupabaseCookieAuthenticationEvents>();
 
 builder.Services
     .AddAuthentication(options =>
@@ -37,10 +37,10 @@ builder.Services
     .AddCookie(AuthConstants.CookieScheme, options =>
     {
         options.Cookie.Name = "FitAI.Auth";
+        options.Cookie.Path = "/";
         options.Cookie.HttpOnly = true;
         options.Cookie.SecurePolicy =
-            CookieSecurePolicy.Always;
-
+            CookieSecurePolicy.SameAsRequest;
         options.Cookie.SameSite =
             SameSiteMode.Lax;
 
@@ -48,36 +48,18 @@ builder.Services
         options.LogoutPath = "/account/logout";
         options.AccessDeniedPath = "/access-denied";
 
-        options.SlidingExpiration = true;
         options.ExpireTimeSpan =
             TimeSpan.FromDays(7);
 
-        // API/Form endpoint ไม่ควรถูก redirect เป็น HTML
-        options.Events =
-            new CookieAuthenticationEvents
-            {
-                OnRedirectToLogin = context =>
-                {
-                    if (context.Request.Path
-                        .StartsWithSegments("/account"))
-                    {
-                        context.Response.StatusCode =
-                            StatusCodes.Status401Unauthorized;
+        options.SlidingExpiration = true;
 
-                        return Task.CompletedTask;
-                    }
-
-                    context.Response.Redirect(
-                        context.RedirectUri);
-
-                    return Task.CompletedTask;
-                }
-            };
+        options.EventsType =
+            typeof(SupabaseCookieAuthenticationEvents);
     });
-
 
 builder.Services.AddAuthorization();
 builder.Services.AddCascadingAuthenticationState();
+builder.Services.AddHttpContextAccessor();
 
 var app = builder.Build();
 

@@ -3,13 +3,18 @@
 @code {
     protected override void OnInitialized()
     {
-        var relativeUrl =
-            NavigationManager.ToBaseRelativePath(
-                NavigationManager.Uri);
+        var relativePath = NavigationManager
+            .ToBaseRelativePath(NavigationManager.Uri);
 
-        var returnUrl =
-            Uri.EscapeDataString(
-                "/" + relativeUrl);
+        if (relativePath.StartsWith(
+            "login",
+            StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        var returnUrl = Uri.EscapeDataString(
+            "/" + relativePath);
 
         NavigationManager.NavigateTo(
             $"/login?returnUrl={returnUrl}",

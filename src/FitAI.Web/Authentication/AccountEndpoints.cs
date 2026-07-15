@@ -2,6 +2,7 @@
 using System.Security.Claims;
 using FitAI.Application.Features.Authentication;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Mvc;
 
 namespace FitAI.Web.Authentication;
 
@@ -18,14 +19,19 @@ public static class AccountEndpoints
             "/account/logout",
             LogoutAsync);
 
+        endpoints.MapGet(
+                "/account/session",
+                GetSession)
+            .RequireAuthorization();
+
         return endpoints;
     }
 
     private static async Task<IResult> LoginAsync(
-        HttpContext httpContext,
-        ISupabaseAuthService authService,
-        LoginRequest request,
-        CancellationToken cancellationToken)
+    HttpContext httpContext,
+    ISupabaseAuthService authService,
+    [FromForm] LoginRequest request,
+    CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(request.Email)
             || string.IsNullOrWhiteSpace(request.Password))
@@ -45,23 +51,23 @@ public static class AccountEndpoints
                 cancellationToken);
 
             var claims = new List<Claim>
-            {
-                new(
-                    ClaimTypes.NameIdentifier,
-                    session.UserId.ToString()),
+        {
+            new(
+                ClaimTypes.NameIdentifier,
+                session.UserId.ToString()),
 
-                new(
-                    ClaimTypes.Name,
-                    session.Email),
+            new(
+                ClaimTypes.Name,
+                session.Email),
 
-                new(
-                    ClaimTypes.Email,
-                    session.Email),
+            new(
+                ClaimTypes.Email,
+                session.Email),
 
-                new(
-                    "supabase_user_id",
-                    session.UserId.ToString())
-            };
+            new(
+                AuthConstants.SupabaseUserIdClaim,
+                session.UserId.ToString())
+        };
 
             var identity = new ClaimsIdentity(
                 claims,
@@ -69,46 +75,40 @@ public static class AccountEndpoints
 
             var principal = new ClaimsPrincipal(identity);
 
-            var properties =
-                new AuthenticationProperties
-                {
-                    IsPersistent = true,
-                    AllowRefresh = true,
-                    ExpiresUtc = DateTimeOffset.UtcNow
-                        .AddDays(7)
-                };
+            var properties = new AuthenticationProperties
+            {
+                IsPersistent = true,
+                AllowRefresh = true,
+                ExpiresUtc = DateTimeOffset.UtcNow.AddDays(7)
+            };
 
             properties.StoreTokens(
-            [
-                new AuthenticationToken
-                {
-                    Name = AuthConstants.AccessTokenName,
-                    Value = session.AccessToken
-                },
-                new AuthenticationToken
-                {
-                    Name = AuthConstants.RefreshTokenName,
-                    Value = session.RefreshToken
-                },
-                new AuthenticationToken
-                {
-                    Name = AuthConstants.TokenExpiresAtName,
-                    Value = session.ExpiresAtUtc
-                        .ToString(
-                            "O",
-                            CultureInfo.InvariantCulture)
-                }
-            ]);
+[
+    new AuthenticationToken
+    {
+        Name = AuthConstants.AccessTokenName,
+        Value = session.AccessToken
+    },
+    new AuthenticationToken
+    {
+        Name = AuthConstants.RefreshTokenName,
+        Value = session.RefreshToken
+    },
+    new AuthenticationToken
+    {
+        Name = AuthConstants.TokenExpiresAtName,
+        Value = session.ExpiresAtUtc.ToString("O")
+    }
+]);
 
             await httpContext.SignInAsync(
                 AuthConstants.CookieScheme,
                 principal,
                 properties);
 
-            var returnUrl =
-                IsLocalReturnUrl(request.ReturnUrl)
-                    ? request.ReturnUrl!
-                    : "/";
+            var returnUrl = IsLocalReturnUrl(request.ReturnUrl)
+                ? request.ReturnUrl!
+                : "/";
 
             return Results.Redirect(returnUrl);
         }
@@ -157,5 +157,20 @@ public static class AccountEndpoints
                && returnUrl.StartsWith('/')
                && !returnUrl.StartsWith("//")
                && !returnUrl.StartsWith(@"/\");
+    }
+    private static IResult GetSession(
+    HttpContext httpContext)
+    {
+        return Results.Json(new
+        {
+            isAuthenticated =
+                httpContext.User.Identity?.IsAuthenticated == true,
+
+            userId = httpContext.User.FindFirst(
+                ClaimTypes.NameIdentifier)?.Value,
+
+            email = httpContext.User.FindFirst(
+                ClaimTypes.Email)?.Value
+        });
     }
 }

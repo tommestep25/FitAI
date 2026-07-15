@@ -1,0 +1,60 @@
+﻿@page "/current-user-test"
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+@using FitAI.Application.Common.Interfaces
+@inject ICurrentUserService CurrentUserService
+
+<PageTitle>Current User Test</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Small"
+              Class="py-6">
+
+    <MudText Typo="Typo.h4">
+        Current User
+    </MudText>
+
+    @if (_isLoading)
+    {
+        <MudProgressCircular Indeterminate="true" />
+    }
+    else if (!string.IsNullOrWhiteSpace(_error))
+    {
+        <MudAlert Severity="Severity.Error">
+            @_error
+        </MudAlert>
+    }
+    else
+    {
+        <MudText>User ID: @_userId</MudText>
+        <MudText>Email: @_email</MudText>
+    }
+
+</MudContainer>
+
+@code {
+    private bool _isLoading = true;
+    private Guid? _userId;
+    private string? _email;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _userId = await CurrentUserService
+                .GetUserIdAsync();
+
+            _email = await CurrentUserService
+                .GetEmailAsync();
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+}

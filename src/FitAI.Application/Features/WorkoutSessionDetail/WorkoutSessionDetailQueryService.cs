@@ -4,13 +4,17 @@ using Microsoft.EntityFrameworkCore;
 namespace FitAI.Application.Features.WorkoutSessionDetail;
 
 public sealed class WorkoutSessionDetailQueryService(
-    IApplicationDbContext context)
+    IApplicationDbContext context,
+    ICurrentUserService currentUserService)
     : IWorkoutSessionDetailQueryService
 {
     public async Task<WorkoutSessionDetailDto?> GetAsync(
         Guid workoutSessionId,
         CancellationToken cancellationToken = default)
     {
+        var userId = await currentUserService.GetUserIdAsync(
+    cancellationToken);
+
         var session = await context.WorkoutSessions
             .AsNoTracking()
             .Include(x => x.Exercises)
@@ -18,7 +22,8 @@ public sealed class WorkoutSessionDetailQueryService(
             .Include(x => x.Exercises)
                 .ThenInclude(x => x.Sets)
             .FirstOrDefaultAsync(
-                x => x.Id == workoutSessionId,
+                x => x.Id == workoutSessionId
+                     && x.UserId == userId,
                 cancellationToken);
 
         if (session is null)

@@ -3,13 +3,18 @@ using Microsoft.EntityFrameworkCore;
 
 namespace FitAI.Application.Features.WorkoutSessions;
 
-public sealed class CompleteWorkoutService(IApplicationDbContext context)
+public sealed class CompleteWorkoutService(
+    IApplicationDbContext context,
+    ICurrentUserService currentUserService)
     : ICompleteWorkoutService
 {
     public async Task<CompleteWorkoutResult> CompleteAsync(
         CompleteWorkoutCommand command,
         CancellationToken cancellationToken = default)
     {
+        var userId = await currentUserService.GetUserIdAsync(
+    cancellationToken);
+
         if (command.WorkoutSessionId == Guid.Empty)
         {
             throw new ArgumentException(
@@ -21,7 +26,8 @@ public sealed class CompleteWorkoutService(IApplicationDbContext context)
             .Include(x => x.Exercises)
                 .ThenInclude(x => x.Sets)
             .FirstOrDefaultAsync(
-                x => x.Id == command.WorkoutSessionId,
+                x => x.Id == command.WorkoutSessionId
+                     && x.UserId == userId,
                 cancellationToken)
             ?? throw new InvalidOperationException(
                 "Workout session not found.");

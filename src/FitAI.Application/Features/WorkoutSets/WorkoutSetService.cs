@@ -3,7 +3,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace FitAI.Application.Features.WorkoutSets;
 
-public sealed class WorkoutSetService(IApplicationDbContext context)
+public sealed class WorkoutSetService(
+    IApplicationDbContext context,
+    ICurrentUserService currentUserService)
     : IWorkoutSetService
 {
     public async Task<CompleteWorkoutSetResult> CompleteSetAsync(
@@ -12,11 +14,19 @@ public sealed class WorkoutSetService(IApplicationDbContext context)
     {
         ValidateCommand(command);
 
+        var userId = await GetCurrentUserIdAsync(
+            cancellationToken);
+
         var workoutSet = await context.WorkoutSets
+            .Include(x => x.WorkoutSessionExercise)
+                .ThenInclude(x => x.WorkoutSession)
             .FirstOrDefaultAsync(
-                x => x.Id == command.WorkoutSetId,
+                x => x.Id == command.WorkoutSetId
+                     && x.WorkoutSessionExercise
+                         .WorkoutSession.UserId == userId,
                 cancellationToken)
-            ?? throw new InvalidOperationException("Workout set not found.");
+            ?? throw new InvalidOperationException(
+                "Workout set not found.");
 
         if (workoutSet.IsSkipped)
         {
@@ -222,7 +232,12 @@ public sealed class WorkoutSetService(IApplicationDbContext context)
 
         await context.SaveChangesAsync(cancellationToken);
     }
-
+    private async Task<Guid> GetCurrentUserIdAsync(
+    CancellationToken cancellationToken)
+    {
+        return await currentUserService.GetUserIdAsync(
+            cancellationToken);
+    }
     private static void ValidateCommand(
         CompleteWorkoutSetCommand command)
     {

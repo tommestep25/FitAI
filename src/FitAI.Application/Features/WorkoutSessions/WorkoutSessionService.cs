@@ -1,5 +1,4 @@
 ﻿using FitAI.Application.Common.Interfaces;
-using FitAI.Application.Common.Security;
 using FitAI.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -14,9 +13,8 @@ public sealed class WorkoutSessionService(
         StartWorkoutSessionCommand command,
         CancellationToken cancellationToken = default)
     {
-        var userId =
-    await currentUserService.GetRequiredUserIdAsync(
-        cancellationToken);
+        var userId = await currentUserService.GetUserIdAsync(
+            cancellationToken);
 
         var templateDay = await context.WorkoutTemplateDays
             .AsNoTracking()
@@ -44,10 +42,7 @@ public sealed class WorkoutSessionService(
         {
             Id = Guid.NewGuid(),
             UserId = userId,
-
-            // ไม่ใช่ workout.workout_days
             WorkoutDayId = null,
-
             SourceTemplateDayId = templateDay.Id,
             SessionDate = DateOnly.FromDateTime(now.UtcDateTime),
             StartTime = now,

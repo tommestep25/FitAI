@@ -1,0 +1,66 @@
+﻿@page "/auth-session-test"
+@attribute [Authorize]
+
+@using Microsoft.AspNetCore.Authentication
+@inject IHttpContextAccessor HttpContextAccessor
+
+<PageTitle>Auth Session Test</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Small"
+              Class="py-6">
+
+    <MudText Typo="Typo.h4"
+             Class="mb-4">
+        Authentication Session
+    </MudText>
+
+    @if (_httpContextUnavailable)
+    {
+        <MudAlert Severity="Severity.Info">
+            HttpContext ไม่พร้อมใน Interactive Circuit
+            ให้ตรวจ Token ผ่าน Endpoint ด้านล่าง
+        </MudAlert>
+    }
+    else
+    {
+        <MudText>
+            User ID: @_userId
+        </MudText>
+
+        <MudText>
+            Email: @_email
+        </MudText>
+    }
+
+    <MudButton Href="/account/session"
+               Target="_blank"
+               Variant="Variant.Filled"
+               Color="Color.Primary"
+               Class="mt-4">
+        View Server Session
+    </MudButton>
+
+</MudContainer>
+
+@code {
+    private bool _httpContextUnavailable;
+    private string? _userId;
+    private string? _email;
+
+    protected override void OnInitialized()
+    {
+        var context = HttpContextAccessor.HttpContext;
+
+        if (context is null)
+        {
+            _httpContextUnavailable = true;
+            return;
+        }
+
+        _userId = context.User.FindFirst(
+            System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        _email = context.User.FindFirst(
+            System.Security.Claims.ClaimTypes.Email)?.Value;
+    }
+}

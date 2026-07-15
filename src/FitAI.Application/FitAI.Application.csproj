@@ -14,5 +14,8 @@
   <ItemGroup>
     <ProjectReference Include="..\FitAI.Domain\FitAI.Domain.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Common\Security\" />
+  </ItemGroup>
 
 </Project>
