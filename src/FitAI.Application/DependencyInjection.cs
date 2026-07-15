@@ -6,7 +6,7 @@ using FitAI.Application.Features.WorkoutSessions;
 using FitAI.Application.Features.WorkoutTemplates;
 using FitAI.Application.Features.WorkoutSessionDetail;
 using FitAI.Application.Features.WorkoutSets;
-using FitAI.Application.Features.WorkoutSessions;
+using FitAI.Application.Features.Profiles;
 
 namespace FitAI.Application;
 
@@ -22,6 +22,7 @@ public static class DependencyInjection
         services.AddScoped<IWorkoutSessionDetailQueryService,WorkoutSessionDetailQueryService>();
         services.AddScoped<IWorkoutSetService, WorkoutSetService>();
         services.AddScoped<ICompleteWorkoutService, CompleteWorkoutService>();
+        services.AddScoped<ICurrentUserProfileService,CurrentUserProfileService>();
         return services;
     }
 }

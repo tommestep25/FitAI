@@ -6,5 +6,6 @@
     <LangVersion>preview</LangVersion>
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <ExcludeAssets>contentFiles</ExcludeAssets>
   </PropertyGroup>
 </Project>

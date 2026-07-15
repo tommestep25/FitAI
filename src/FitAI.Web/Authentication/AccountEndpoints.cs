@@ -106,11 +106,17 @@ public static class AccountEndpoints
                 principal,
                 properties);
 
-            var returnUrl = IsLocalReturnUrl(request.ReturnUrl)
-                ? request.ReturnUrl!
-                : "/";
+            var destination =
+                IsLocalReturnUrl(request.ReturnUrl)
+                    ? request.ReturnUrl!
+                    : "/";
 
-            return Results.Redirect(returnUrl);
+            var continueUrl =
+                $"/account/continue?returnUrl=" +
+                Uri.EscapeDataString(destination);
+
+            return Results.Redirect(continueUrl);
+
         }
         catch (AuthServiceException)
         {

@@ -16,7 +16,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<WorkoutSessionExercise> WorkoutSessionExercises => Set<WorkoutSessionExercise>();
     public DbSet<WorkoutTemplateExercise> WorkoutTemplateExercises => Set<WorkoutTemplateExercise>();
     public DbSet<WorkoutSet> WorkoutSets => Set<WorkoutSet>();
-
+    public DbSet<UserProfile> UserProfiles => Set<UserProfile>();
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);

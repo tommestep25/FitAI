@@ -1,0 +1,98 @@
+﻿@page "/account/continue"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.WebUtilities
+
+@using FitAI.Application.Features.Profiles
+
+@inject ICurrentUserProfileService ProfileService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Loading | FitAI</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Small"
+              Class="py-8">
+
+    <div class="d-flex flex-column align-center">
+        <MudProgressCircular Indeterminate="true"
+                             Color="Color.Primary"
+                             Size="Size.Large" />
+
+        <MudText Typo="Typo.body1"
+                 Class="mt-4">
+            กำลังเตรียมบัญชีของคุณ...
+        </MudText>
+    </div>
+
+</MudContainer>
+
+@code {
+    private string _returnUrl = "/";
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var uri = NavigationManager.ToAbsoluteUri(
+                NavigationManager.Uri);
+
+            var query = QueryHelpers.ParseQuery(uri.Query);
+
+            if (query.TryGetValue(
+                    "returnUrl",
+                    out var returnUrl)
+                && IsLocalReturnUrl(returnUrl.ToString()))
+            {
+                _returnUrl = returnUrl.ToString();
+            }
+
+            var profile = await ProfileService.GetCurrentAsync();
+
+            if (profile is null)
+            {
+                NavigationManager.NavigateTo(
+                    "/account/profile-missing",
+                    forceLoad: true);
+
+                return;
+            }
+
+            if (!profile.IsActive)
+            {
+                NavigationManager.NavigateTo(
+                    "/access-denied",
+                    forceLoad: true);
+
+                return;
+            }
+
+            if (!profile.OnboardingCompleted)
+            {
+                NavigationManager.NavigateTo(
+                    $"/onboarding?returnUrl=" +
+                    Uri.EscapeDataString(_returnUrl),
+                    forceLoad: true);
+
+                return;
+            }
+
+            NavigationManager.NavigateTo(
+                _returnUrl,
+                forceLoad: true);
+        }
+        catch
+        {
+            NavigationManager.NavigateTo(
+                "/login?error=profile_error",
+                forceLoad: true);
+        }
+    }
+
+    private static bool IsLocalReturnUrl(
+        string? returnUrl)
+    {
+        return !string.IsNullOrWhiteSpace(returnUrl)
+               && returnUrl.StartsWith('/')
+               && !returnUrl.StartsWith("//")
+               && !returnUrl.StartsWith(@"/\");
+    }
+}
