@@ -1,0 +1,36 @@
+﻿@page "/auth/confirmed"
+
+<PageTitle>Email Confirmed | FitAI</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Small"
+              Class="py-8">
+
+    <MudPaper Elevation="2"
+              Class="pa-6 text-center">
+
+        <MudIcon Icon="@Icons.Material.Filled.Verified"
+                 Color="Color.Success"
+                 Size="Size.Large" />
+
+        <MudText Typo="Typo.h4"
+                 Class="mt-3">
+            Email confirmed
+        </MudText>
+
+        <MudText Typo="Typo.body1"
+                 Color="Color.Secondary"
+                 Class="mb-5">
+            ยืนยันอีเมลเรียบร้อยแล้ว สามารถเข้าสู่ระบบได้
+        </MudText>
+
+        <MudButton Href="/login?confirmed=true"
+                   Variant="Variant.Filled"
+                   Color="Color.Primary"
+                   FullWidth="true"
+                   Size="Size.Large">
+            Go to Login
+        </MudButton>
+
+    </MudPaper>
+
+</MudContainer>

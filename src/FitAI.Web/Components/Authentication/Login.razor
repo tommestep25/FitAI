@@ -24,7 +24,13 @@
                  Class="mb-5">
             Sign in to continue your training
         </MudText>
-
+        @if (!string.IsNullOrWhiteSpace(_successMessage))
+        {
+            <MudAlert Severity="Severity.Success"
+                      Class="mb-4">
+                @_successMessage
+            </MudAlert>
+        }
         @if (!string.IsNullOrWhiteSpace(_errorMessage))
         {
             <MudAlert Severity="Severity.Error"
@@ -56,13 +62,26 @@
         </form>
 
     </MudPaper>
+    <MudDivider Class="my-5" />
 
+    <div class="text-center">
+        <MudText Typo="Typo.body2"
+                 Color="Color.Secondary">
+            ยังไม่มีบัญชี?
+        </MudText>
+
+        <MudButton Href="/register"
+                   Variant="Variant.Text"
+                   Color="Color.Primary">
+            Create account
+        </MudButton>
+    </div>
 </MudContainer>
 
 @code {
     private string _returnUrl = "/";
     private string? _errorMessage;
-
+    private string? _successMessage;
     protected override void OnInitialized()
     {
         var uri = NavigationManager.ToAbsoluteUri(
@@ -93,5 +112,16 @@
 
             _ => "ไม่สามารถเข้าสู่ระบบได้"
         };
+        if (query.TryGetValue(
+        "confirmed",
+        out var confirmed)
+    && string.Equals(
+        confirmed.ToString(),
+        "true",
+        StringComparison.OrdinalIgnoreCase))
+        {
+            _successMessage =
+                "ยืนยันอีเมลเรียบร้อยแล้ว กรุณาเข้าสู่ระบบ";
+        }
     }
 }

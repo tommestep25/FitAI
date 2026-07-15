@@ -1,0 +1,20 @@
+.register-page {
+    min-height: calc(100vh - 64px);
+}
+
+.register-card {
+    margin-top: 3vh;
+    border-radius: 22px;
+}
+
+@media (max-width: 600px) {
+    .register-page {
+        padding: 12px !important;
+    }
+
+    .register-card {
+        margin-top: 0;
+        padding: 20px !important;
+        border-radius: 16px;
+    }
+}

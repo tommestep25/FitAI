@@ -3,11 +3,15 @@
 public interface ISupabaseAuthService
 {
     Task<AuthSessionDto> LoginAsync(
-        LoginCommand command,
-        CancellationToken cancellationToken = default);
+            LoginCommand command,
+            CancellationToken cancellationToken = default);
 
     Task<RegisterResultDto> RegisterAsync(
         RegisterCommand command,
+        CancellationToken cancellationToken = default);
+
+    Task ResendConfirmationAsync(
+        ResendConfirmationCommand command,
         CancellationToken cancellationToken = default);
 
     Task<AuthSessionDto> RefreshSessionAsync(

@@ -1,5 +1,464 @@
-﻿<h3>Register</h3>
+﻿@page "/register"
+@rendermode InteractiveServer
+
+@using System.ComponentModel.DataAnnotations
+@using FitAI.Application.Features.Authentication
+
+@inject ISupabaseAuthService AuthService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Register | FitAI</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Small"
+              Class="register-page py-8">
+
+    <MudPaper Elevation="3"
+              Class="register-card pa-6">
+
+        <div class="text-center mb-5">
+            <MudIcon Icon="@Icons.Material.Filled.FitnessCenter"
+                     Color="Color.Primary"
+                     Size="Size.Large" />
+
+            <MudText Typo="Typo.h4"
+                     Class="mt-2">
+                Create FitAI Account
+            </MudText>
+
+            <MudText Typo="Typo.body2"
+                     Color="Color.Secondary">
+                สร้างบัญชีเพื่อเริ่มบันทึกการฝึกและติดตามพัฒนาการ
+            </MudText>
+        </div>
+
+        @if (_registrationCompleted)
+        {
+            <MudAlert Severity="Severity.Success"
+                      Variant="Variant.Filled"
+                      Class="mb-4">
+
+                <MudText Typo="Typo.h6">
+                    สมัครสมาชิกสำเร็จ
+                </MudText>
+
+                <MudText Typo="Typo.body2">
+                    ระบบส่งอีเมลยืนยันไปที่ @_model.Email
+                    กรุณาตรวจสอบอีเมลก่อนเข้าสู่ระบบ
+                </MudText>
+
+            </MudAlert>
+
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       FullWidth="true"
+                       Size="Size.Large"
+                       OnClick="GoToLogin">
+
+                ไปหน้า Login
+
+            </MudButton>
+
+        }
+        else
+        {
+            @if (!string.IsNullOrWhiteSpace(_errorMessage))
+            {
+                <MudAlert Severity="Severity.Error"
+                          Class="mb-4"
+                          CloseIconClicked="ClearError">
+                    @_errorMessage
+                </MudAlert>
+            }
+            <MudButton Variant="Variant.Outlined"
+                       Color="Color.Primary"
+                       FullWidth="true"
+                       Disabled="@_isResending"
+                       OnClick="ResendConfirmationAsync"
+                       Class="mb-3">
+
+                @if (_isResending)
+                {
+                    <MudProgressCircular Indeterminate="true"
+                                         Size="Size.Small"
+                                         Class="me-2" />
+
+                    <span>Sending...</span>
+                }
+                else
+                {
+                    <span>Resend confirmation email</span>
+                }
+
+            </MudButton>
+            <EditForm Model="_model"
+                      OnValidSubmit="RegisterAsync">
+
+                <DataAnnotationsValidator />
+
+                <MudGrid Spacing="3">
+
+                    <MudItem xs="12" sm="6">
+                        <MudTextField T="string"
+                                      @bind-Value="_model.FirstName"
+                                      Label="First name"
+                                      Variant="Variant.Outlined"
+                                      Margin="Margin.Dense"
+                                      Immediate="true"
+                                      Disabled="@_isSubmitting"
+                                      For="@(() => _model.FirstName)" />
+                    </MudItem>
+
+                    <MudItem xs="12" sm="6">
+                        <MudTextField T="string"
+                                      @bind-Value="_model.LastName"
+                                      Label="Last name"
+                                      Variant="Variant.Outlined"
+                                      Margin="Margin.Dense"
+                                      Immediate="true"
+                                      Disabled="@_isSubmitting"
+                                      For="@(() => _model.LastName)" />
+                    </MudItem>
+
+                    <MudItem xs="12">
+                        <MudTextField T="string"
+                                      @bind-Value="_model.Email"
+                                      Label="Email"
+                                      InputType="InputType.Email"
+                                      Variant="Variant.Outlined"
+                                      Margin="Margin.Dense"
+                                      Immediate="true"
+                                      Disabled="@_isSubmitting"
+                                      For="@(() => _model.Email)"
+                                      Adornment="Adornment.Start"
+                                      AdornmentIcon="@Icons.Material.Filled.Email"
+                                      Autocomplete="email" />
+                    </MudItem>
+
+                    <MudItem xs="12">
+                        <MudTextField T="string"
+                                      @bind-Value="_model.Password"
+                                      Label="Password"
+                                      InputType="@GetPasswordInputType()"
+                                      Variant="Variant.Outlined"
+                                      Margin="Margin.Dense"
+                                      Immediate="true"
+                                      Disabled="@_isSubmitting"
+                                      For="@(() => _model.Password)"
+                                      Adornment="Adornment.End"
+                                      AdornmentIcon="@GetPasswordIcon()"
+                                      OnAdornmentClick="TogglePasswordVisibility"
+                                      Autocomplete="new-password" />
+
+                        <MudText Typo="Typo.caption"
+                                 Color="Color.Secondary">
+                            รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร
+                        </MudText>
+                    </MudItem>
+
+                    <MudItem xs="12">
+                        <MudTextField T="string"
+                                      @bind-Value="_model.ConfirmPassword"
+                                      Label="Confirm password"
+                                      InputType="@GetConfirmPasswordInputType()"
+                                      Variant="Variant.Outlined"
+                                      Margin="Margin.Dense"
+                                      Immediate="true"
+                                      Disabled="@_isSubmitting"
+                                      For="@(() => _model.ConfirmPassword)"
+                                      Adornment="Adornment.End"
+                                      AdornmentIcon="@GetConfirmPasswordIcon()"
+                                      OnAdornmentClick="ToggleConfirmPasswordVisibility"
+                                      Autocomplete="new-password" />
+                    </MudItem>
+
+                    <MudItem xs="12">
+                        <MudCheckBox T="bool"
+                                     @bind-Value="_model.AcceptTerms"
+                                     Label="ฉันยอมรับเงื่อนไขการใช้งานและนโยบายความเป็นส่วนตัว"
+                                     Color="Color.Primary"
+                                     Disabled="@_isSubmitting" />
+
+                        <ValidationMessage For="@(() => _model.AcceptTerms)" />
+                    </MudItem>
+
+                    <MudItem xs="12">
+                        <MudButton ButtonType="ButtonType.Submit"
+                                   Variant="Variant.Filled"
+                                   Color="Color.Primary"
+                                   Size="Size.Large"
+                                   FullWidth="true"
+                                   Disabled="@_isSubmitting">
+
+                            @if (_isSubmitting)
+                            {
+                                <MudProgressCircular Indeterminate="true"
+                                                     Size="Size.Small"
+                                                     Class="me-2" />
+
+                                <span>Creating account...</span>
+                            }
+                            else
+                            {
+                                <span>Create account</span>
+                            }
+
+                        </MudButton>
+                    </MudItem>
+
+                </MudGrid>
+
+            </EditForm>
+           
+            <MudDivider Class="my-5" />
+
+            <div class="text-center">
+                <MudText Typo="Typo.body2"
+                         Color="Color.Secondary">
+                    มีบัญชีอยู่แล้ว?
+                </MudText>
+
+                <MudButton Variant="Variant.Text"
+                           Color="Color.Primary"
+                           OnClick="GoToLogin">
+                    Sign in
+                </MudButton>
+            </div>
+        }
+
+
+    </MudPaper>
+
+</MudContainer>
 
 @code {
+    private readonly RegisterFormModel _model = new();
 
+    private bool _isSubmitting;
+    private bool _registrationCompleted;
+    private bool _showPassword;
+    private bool _showConfirmPassword;
+    private bool _isResending;
+    private string? _errorMessage;
+
+    private async Task RegisterAsync()
+    {
+        if (_isSubmitting)
+        {
+            return;
+        }
+
+        _errorMessage = null;
+
+        if (_model.Password != _model.ConfirmPassword)
+        {
+            _errorMessage = "Password และ Confirm password ไม่ตรงกัน";
+            return;
+        }
+
+        try
+        {
+            _isSubmitting = true;
+
+            var result = await AuthService.RegisterAsync(
+                new RegisterCommand
+                {
+                    Email = _model.Email.Trim(),
+                    Password = _model.Password,
+                    FirstName = _model.FirstName.Trim(),
+                    LastName = _model.LastName.Trim()
+                });
+
+            if (result.RequiresEmailConfirmation)
+            {
+                _registrationCompleted = true;
+                return;
+            }
+
+            /*
+             * กรณี Supabase ปิด Confirm Email
+             * ผู้ใช้ถูกสร้างและได้รับ Session ทันที
+             * รอบนี้ให้ไป Login เพื่อให้ระบบสร้าง FitAI.Auth Cookie
+             */
+            NavigationManager.NavigateTo(
+                $"/login?registered=true&email={Uri.EscapeDataString(result.Email)}",
+                forceLoad: true);
+        }
+        catch (AuthServiceException ex)
+        {
+            _errorMessage = MapAuthError(ex);
+        }
+        catch (ArgumentException ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        catch (Exception)
+        {
+            _errorMessage =
+                "ไม่สามารถสมัครสมาชิกได้ในขณะนี้ กรุณาลองใหม่อีกครั้ง";
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+
+    private static string MapAuthError(AuthServiceException exception)
+    {
+        var message = exception.Message.ToLowerInvariant();
+
+        if (message.Contains("already registered")
+            || message.Contains("already exists")
+            || message.Contains("user already"))
+        {
+            return "อีเมลนี้ถูกใช้งานแล้ว กรุณาเข้าสู่ระบบ";
+        }
+
+        if (message.Contains("invalid email"))
+        {
+            return "รูปแบบอีเมลไม่ถูกต้อง";
+        }
+
+        if (message.Contains("password"))
+        {
+            return "รหัสผ่านไม่ผ่านเงื่อนไขที่กำหนด";
+        }
+
+        if (message.Contains("rate limit"))
+        {
+            return "มีการสมัครหลายครั้งเกินไป กรุณารอสักครู่แล้วลองใหม่";
+        }
+
+        return exception.Message;
+    }
+
+    private InputType GetPasswordInputType()
+    {
+        return _showPassword
+            ? InputType.Text
+            : InputType.Password;
+    }
+
+    private InputType GetConfirmPasswordInputType()
+    {
+        return _showConfirmPassword
+            ? InputType.Text
+            : InputType.Password;
+    }
+
+    private string GetPasswordIcon()
+    {
+        return _showPassword
+            ? Icons.Material.Filled.VisibilityOff
+            : Icons.Material.Filled.Visibility;
+    }
+
+    private string GetConfirmPasswordIcon()
+    {
+        return _showConfirmPassword
+            ? Icons.Material.Filled.VisibilityOff
+            : Icons.Material.Filled.Visibility;
+    }
+
+    private void TogglePasswordVisibility()
+    {
+        _showPassword = !_showPassword;
+    }
+
+    private void ToggleConfirmPasswordVisibility()
+    {
+        _showConfirmPassword = !_showConfirmPassword;
+    }
+
+    private void ClearError()
+    {
+        _errorMessage = null;
+    }
+
+    private void GoToLogin()
+    {
+        NavigationManager.NavigateTo(
+            "/login",
+            forceLoad: true);
+    }
+    private async Task ResendConfirmationAsync()
+    {
+        if (_isResending)
+        {
+            return;
+        }
+
+        try
+        {
+            _isResending = true;
+            _errorMessage = null;
+
+            await AuthService.ResendConfirmationAsync(
+                new ResendConfirmationCommand
+                {
+                    Email = _model.Email.Trim()
+                });
+        }
+        catch (AuthServiceException ex)
+        {
+            _errorMessage = MapAuthError(ex);
+        }
+        catch (Exception)
+        {
+            _errorMessage =
+                "ไม่สามารถส่งอีเมลยืนยันซ้ำได้ กรุณาลองใหม่";
+        }
+        finally
+        {
+            _isResending = false;
+        }
+    }
+    private sealed class RegisterFormModel : IValidatableObject
+    {
+        [Required(ErrorMessage = "กรุณากรอกชื่อ")]
+        [StringLength(
+            100,
+            MinimumLength = 2,
+            ErrorMessage = "ชื่อต้องมี 2–100 ตัวอักษร")]
+        public string FirstName { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "กรุณากรอกนามสกุล")]
+        [StringLength(
+            100,
+            MinimumLength = 2,
+            ErrorMessage = "นามสกุลต้องมี 2–100 ตัวอักษร")]
+        public string LastName { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "กรุณากรอกอีเมล")]
+        [EmailAddress(ErrorMessage = "รูปแบบอีเมลไม่ถูกต้อง")]
+        public string Email { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "กรุณากรอกรหัสผ่าน")]
+        [MinLength(
+            8,
+            ErrorMessage = "รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร")]
+        public string Password { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "กรุณายืนยันรหัสผ่าน")]
+        public string ConfirmPassword { get; set; } = string.Empty;
+
+        public bool AcceptTerms { get; set; }
+
+        public IEnumerable<ValidationResult> Validate(
+            ValidationContext validationContext)
+        {
+            if (Password != ConfirmPassword)
+            {
+                yield return new ValidationResult(
+                    "Password และ Confirm password ไม่ตรงกัน",
+                    [nameof(ConfirmPassword)]);
+            }
+
+            if (!AcceptTerms)
+            {
+                yield return new ValidationResult(
+                    "กรุณายอมรับเงื่อนไขการใช้งาน",
+                    [nameof(AcceptTerms)]);
+            }
+        }
+    }
 }

@@ -68,11 +68,17 @@ public sealed class SupabaseAuthService(
         {
             email = command.Email.Trim(),
             password = command.Password,
+
             data = new
             {
                 display_name = command.DisplayName,
                 first_name = command.FirstName.Trim(),
                 last_name = command.LastName.Trim()
+            },
+
+            gotrue_meta_security = new
+            {
+                captcha_token = (string?)null
             }
         });
 
@@ -137,6 +143,48 @@ public sealed class SupabaseAuthService(
                 cancellationToken);
 
         return MapSession(authResponse);
+    }
+    public async Task ResendConfirmationAsync(
+    ResendConfirmationCommand command,
+    CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(command.Email))
+        {
+            throw new ArgumentException(
+                "Email is required.",
+                nameof(command));
+        }
+
+        var resendUrl = "auth/v1/resend";
+
+        if (!string.IsNullOrWhiteSpace(
+                _options.EmailConfirmationRedirectUrl))
+        {
+            resendUrl +=
+                $"?redirect_to={Uri.EscapeDataString(
+                    _options.EmailConfirmationRedirectUrl)}";
+        }
+
+        using var request = CreateRequest(
+            HttpMethod.Post,
+            resendUrl);
+
+        request.Content = JsonContent.Create(new
+        {
+            type = "signup",
+            email = command.Email.Trim()
+        });
+
+        using var response = await httpClient.SendAsync(
+            request,
+            cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            await ThrowAuthExceptionAsync(
+                response,
+                cancellationToken);
+        }
     }
 
     public async Task LogoutAsync(
