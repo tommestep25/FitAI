@@ -7,4 +7,8 @@ public interface ICurrentUserProfileService
 
     Task<bool> IsOnboardingCompletedAsync(
         CancellationToken cancellationToken = default);
+
+    Task<CompleteOnboardingResult> CompleteOnboardingAsync(
+        CompleteOnboardingCommand command,
+        CancellationToken cancellationToken = default);
 }

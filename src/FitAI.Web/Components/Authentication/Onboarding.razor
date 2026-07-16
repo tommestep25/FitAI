@@ -1,0 +1,508 @@
+﻿@page "/onboarding"
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+@using System.ComponentModel.DataAnnotations
+@using FitAI.Application.Features.Profiles
+@using Microsoft.AspNetCore.WebUtilities
+
+@inject ICurrentUserProfileService ProfileService
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+
+<PageTitle>Set up your profile | FitAI</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium"
+              Class="onboarding-page py-6">
+
+    @if (_isLoading)
+    {
+        <div class="d-flex justify-center py-8">
+            <MudProgressCircular Indeterminate="true"
+                                 Color="Color.Primary"
+                                 Size="Size.Large" />
+        </div>
+    }
+    else if (!string.IsNullOrWhiteSpace(_loadError))
+    {
+        <MudAlert Severity="Severity.Error"
+                  Variant="Variant.Filled">
+            @_loadError
+        </MudAlert>
+    }
+    else
+    {
+        <MudPaper Elevation="3"
+                  Class="onboarding-card pa-6">
+
+            <div class="text-center mb-5">
+                <MudIcon Icon="@Icons.Material.Filled.PersonAdd"
+                         Color="Color.Primary"
+                         Size="Size.Large" />
+
+                <MudText Typo="Typo.h4"
+                         Class="mt-2">
+                    ตั้งค่าโปรไฟล์ของคุณ
+                </MudText>
+
+                <MudText Typo="Typo.body2"
+                         Color="Color.Secondary">
+                    ข้อมูลนี้จะใช้คำนวณแผนการฝึก โภชนาการ
+                    และคำแนะนำจาก AI
+                </MudText>
+            </div>
+
+            <EditForm Model="_model"
+                      OnValidSubmit="SubmitAsync">
+
+                <DataAnnotationsValidator />
+
+                <MudGrid Spacing="3">
+
+                    <MudItem xs="12" sm="6">
+                        <MudDatePicker Label="วันเกิด"
+                                       @bind-Date="_model.BirthDate"
+                                       Variant="Variant.Outlined"
+                                       Margin="Margin.Dense"
+                                       Editable="true"
+                                       DateFormat="dd/MM/yyyy"
+                                       MaxDate="@DateTime.Today"
+                                       Disabled="@_isSubmitting" />
+
+                        <ValidationMessage For="@(() => _model.BirthDate)" />
+                    </MudItem>
+
+                    <MudItem xs="12" sm="6">
+                        <MudSelect T="string"
+                                   @bind-Value="_model.Gender"
+                                   Label="เพศ"
+                                   Variant="Variant.Outlined"
+                                   Margin="Margin.Dense"
+                                   Disabled="@_isSubmitting"
+                                   For="@(() => _model.Gender)">
+
+                            <MudSelectItem Value="@("Male")">
+                                ชาย
+                            </MudSelectItem>
+
+                            <MudSelectItem Value="@("Female")">
+                                หญิง
+                            </MudSelectItem>
+
+                            <MudSelectItem Value="@("Other")">
+                                อื่น ๆ
+                            </MudSelectItem>
+
+                            <MudSelectItem Value="@("PreferNotToSay")">
+                                ไม่ประสงค์ระบุ
+                            </MudSelectItem>
+
+                        </MudSelect>
+                    </MudItem>
+
+                    <MudItem xs="12" sm="6">
+                        <MudNumericField T="decimal?"
+                                         @bind-Value="_model.HeightCm"
+                                         Label="ส่วนสูง"
+                                         Adornment="Adornment.End"
+                                         AdornmentText="cm"
+                                         Variant="Variant.Outlined"
+                                         Margin="Margin.Dense"
+                                         HideSpinButtons="true"
+                                         Min="50"
+                                         Max="300"
+                                         Step="0.5M"
+                                         Disabled="@_isSubmitting"
+                                         For="@(() => _model.HeightCm)" />
+                    </MudItem>
+
+                    <MudItem xs="12" sm="6">
+                        <MudNumericField T="decimal?"
+                                         @bind-Value="_model.CurrentWeightKg"
+                                         Label="น้ำหนักปัจจุบัน"
+                                         Adornment="Adornment.End"
+                                         AdornmentText="kg"
+                                         Variant="Variant.Outlined"
+                                         Margin="Margin.Dense"
+                                         HideSpinButtons="true"
+                                         Min="20"
+                                         Max="500"
+                                         Step="0.1M"
+                                         Disabled="@_isSubmitting"
+                                         For="@(() => _model.CurrentWeightKg)" />
+                    </MudItem>
+
+                    <MudItem xs="12" sm="6">
+                        <MudNumericField T="decimal?"
+                                         @bind-Value="_model.GoalWeightKg"
+                                         Label="น้ำหนักเป้าหมาย"
+                                         Adornment="Adornment.End"
+                                         AdornmentText="kg"
+                                         Variant="Variant.Outlined"
+                                         Margin="Margin.Dense"
+                                         HideSpinButtons="true"
+                                         Min="20"
+                                         Max="500"
+                                         Step="0.1M"
+                                         Disabled="@_isSubmitting"
+                                         For="@(() => _model.GoalWeightKg)" />
+                    </MudItem>
+
+                    <MudItem xs="12" sm="6">
+                        <MudSelect T="string"
+                                   @bind-Value="_model.ActivityLevel"
+                                   Label="ระดับกิจกรรม"
+                                   Variant="Variant.Outlined"
+                                   Margin="Margin.Dense"
+                                   Disabled="@_isSubmitting"
+                                   For="@(() => _model.ActivityLevel)">
+
+                            <MudSelectItem Value="@("Sedentary")">
+                                นั่งทำงานเป็นหลัก
+                            </MudSelectItem>
+
+                            <MudSelectItem Value="@("LightlyActive")">
+                                ออกกำลังกาย 1–2 วัน/สัปดาห์
+                            </MudSelectItem>
+
+                            <MudSelectItem Value="@("ModeratelyActive")">
+                                ออกกำลังกาย 3–4 วัน/สัปดาห์
+                            </MudSelectItem>
+
+                            <MudSelectItem Value="@("VeryActive")">
+                                ออกกำลังกาย 5–6 วัน/สัปดาห์
+                            </MudSelectItem>
+
+                            <MudSelectItem Value="@("ExtremelyActive")">
+                                ออกกำลังกายหนักหรือทำงานใช้แรง
+                            </MudSelectItem>
+
+                        </MudSelect>
+                    </MudItem>
+
+                    <MudItem xs="12">
+                        <MudText Typo="Typo.subtitle1"
+                                 Class="mb-2">
+                            เป้าหมายหลัก
+                        </MudText>
+
+                        <MudRadioGroup T="string"
+                                       @bind-Value="_model.FitnessGoal">
+
+                            <MudRadio Value="@("FatLoss")"
+                                      Color="Color.Primary">
+                                ลดไขมัน
+                            </MudRadio>
+
+                            <MudRadio Value="@("BuildMuscle")"
+                                      Color="Color.Primary">
+                                เพิ่มกล้ามเนื้อ
+                            </MudRadio>
+
+                            <MudRadio Value="@("FatLossAndLeanMuscle")"
+                                      Color="Color.Primary">
+                                ลดไขมันและเพิ่มกล้ามแบบลีน
+                            </MudRadio>
+
+                            <MudRadio Value="@("ImproveFitness")"
+                                      Color="Color.Primary">
+                                เพิ่มความแข็งแรงและสุขภาพโดยรวม
+                            </MudRadio>
+
+                            <MudRadio Value="@("MaintainWeight")"
+                                      Color="Color.Primary">
+                                รักษาน้ำหนัก
+                            </MudRadio>
+
+                        </MudRadioGroup>
+
+                        <ValidationMessage For="@(() => _model.FitnessGoal)" />
+                    </MudItem>
+
+                    <MudItem xs="12">
+                        <MudSelect T="string"
+                                   @bind-Value="_model.Timezone"
+                                   Label="เขตเวลา"
+                                   Variant="Variant.Outlined"
+                                   Margin="Margin.Dense"
+                                   Disabled="@_isSubmitting"
+                                   For="@(() => _model.Timezone)">
+
+                            <MudSelectItem Value="@("Asia/Bangkok")">
+                                Asia/Bangkok (UTC+7)
+                            </MudSelectItem>
+
+                            <MudSelectItem Value="@("Asia/Singapore")">
+                                Asia/Singapore (UTC+8)
+                            </MudSelectItem>
+
+                            <MudSelectItem Value="@("Asia/Tokyo")">
+                                Asia/Tokyo (UTC+9)
+                            </MudSelectItem>
+
+                            <MudSelectItem Value="@("UTC")">
+                                UTC
+                            </MudSelectItem>
+
+                        </MudSelect>
+                    </MudItem>
+
+                    @if (!string.IsNullOrWhiteSpace(_submitError))
+                    {
+                        <MudItem xs="12">
+                            <MudAlert Severity="Severity.Error">
+                                @_submitError
+                            </MudAlert>
+                        </MudItem>
+                    }
+
+                    <MudItem xs="12">
+                        <MudButton ButtonType="ButtonType.Submit"
+                                   Variant="Variant.Filled"
+                                   Color="Color.Primary"
+                                   Size="Size.Large"
+                                   FullWidth="true"
+                                   Disabled="@_isSubmitting">
+
+                            @if (_isSubmitting)
+                            {
+                                <MudProgressCircular Indeterminate="true"
+                                                     Size="Size.Small"
+                                                     Class="me-2" />
+
+                                <span>กำลังบันทึก...</span>
+                            }
+                            else
+                            {
+                                <span>เริ่มใช้งาน FitAI</span>
+                            }
+
+                        </MudButton>
+                    </MudItem>
+
+                </MudGrid>
+
+            </EditForm>
+
+        </MudPaper>
+    }
+
+</MudContainer>
+
+@code {
+    private readonly OnboardingFormModel _model = new();
+
+    private bool _isLoading = true;
+    private bool _isSubmitting;
+
+    private string _returnUrl = "/";
+    private string? _loadError;
+    private string? _submitError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            ReadReturnUrl();
+
+            var profile = await ProfileService.GetCurrentAsync();
+
+            if (profile is null)
+            {
+                _loadError = "ไม่พบข้อมูลโปรไฟล์ของผู้ใช้";
+                return;
+            }
+
+            if (!profile.IsActive)
+            {
+                NavigationManager.NavigateTo(
+                    "/access-denied",
+                    forceLoad: true);
+
+                return;
+            }
+
+            if (profile.OnboardingCompleted)
+            {
+                NavigationManager.NavigateTo(
+                    _returnUrl,
+                    forceLoad: true);
+
+                return;
+            }
+
+            PopulateForm(profile);
+        }
+        catch (Exception ex)
+        {
+            _loadError =
+                $"ไม่สามารถโหลดข้อมูลโปรไฟล์ได้: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task SubmitAsync()
+    {
+        if (_isSubmitting)
+        {
+            return;
+        }
+
+        _submitError = null;
+
+        if (!_model.BirthDate.HasValue
+            || !_model.HeightCm.HasValue
+            || !_model.CurrentWeightKg.HasValue)
+        {
+            _submitError = "กรุณากรอกข้อมูลที่จำเป็นให้ครบ";
+            return;
+        }
+
+        try
+        {
+            _isSubmitting = true;
+
+            await ProfileService.CompleteOnboardingAsync(
+                new CompleteOnboardingCommand
+                {
+                    BirthDate = DateOnly.FromDateTime(
+                        _model.BirthDate.Value),
+
+                    Gender = _model.Gender,
+
+                    HeightCm = _model.HeightCm.Value,
+
+                    CurrentWeightKg =
+                        _model.CurrentWeightKg.Value,
+
+                    GoalWeightKg = _model.GoalWeightKg,
+
+                    ActivityLevel = _model.ActivityLevel,
+
+                    FitnessGoal = _model.FitnessGoal,
+
+                    Timezone = _model.Timezone
+                });
+
+            Snackbar.Add(
+                "ตั้งค่าโปรไฟล์เรียบร้อยแล้ว",
+                Severity.Success);
+
+            NavigationManager.NavigateTo(
+                _returnUrl,
+                forceLoad: true);
+        }
+        catch (ArgumentException ex)
+        {
+            _submitError = ex.Message;
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            _submitError = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            _submitError =
+                $"บันทึกข้อมูลไม่สำเร็จ: {ex.Message}";
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+
+    private void ReadReturnUrl()
+    {
+        var uri = NavigationManager.ToAbsoluteUri(
+            NavigationManager.Uri);
+
+        var query = QueryHelpers.ParseQuery(uri.Query);
+
+        if (!query.TryGetValue(
+                "returnUrl",
+                out var returnUrl))
+        {
+            return;
+        }
+
+        var value = returnUrl.ToString();
+
+        if (IsLocalReturnUrl(value))
+        {
+            _returnUrl = value;
+        }
+    }
+
+    private void PopulateForm(
+        CurrentUserProfileDto profile)
+    {
+        _model.BirthDate = profile.BirthDate.HasValue
+            ? profile.BirthDate.Value.ToDateTime(TimeOnly.MinValue)
+            : null;
+
+        _model.Gender = profile.Gender ?? string.Empty;
+        _model.HeightCm = profile.HeightCm;
+        _model.CurrentWeightKg = profile.CurrentWeightKg;
+        _model.GoalWeightKg = profile.GoalWeightKg;
+        _model.ActivityLevel =
+            profile.ActivityLevel ?? string.Empty;
+
+        _model.FitnessGoal =
+            profile.FitnessGoal ?? string.Empty;
+
+        _model.Timezone =
+            string.IsNullOrWhiteSpace(profile.Timezone)
+                ? "Asia/Bangkok"
+                : profile.Timezone;
+    }
+
+    private static bool IsLocalReturnUrl(
+        string? returnUrl)
+    {
+        return !string.IsNullOrWhiteSpace(returnUrl)
+               && returnUrl.StartsWith('/')
+               && !returnUrl.StartsWith("//")
+               && !returnUrl.StartsWith(@"/\");
+    }
+
+    private sealed class OnboardingFormModel
+    {
+        [Required(ErrorMessage = "กรุณาระบุวันเกิด")]
+        public DateTime? BirthDate { get; set; }
+
+        [Required(ErrorMessage = "กรุณาระบุเพศ")]
+        public string Gender { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "กรุณาระบุส่วนสูง")]
+        [Range(
+            50,
+            300,
+            ErrorMessage = "ส่วนสูงต้องอยู่ระหว่าง 50–300 cm")]
+        public decimal? HeightCm { get; set; }
+
+        [Required(ErrorMessage = "กรุณาระบุน้ำหนักปัจจุบัน")]
+        [Range(
+            20,
+            500,
+            ErrorMessage = "น้ำหนักต้องอยู่ระหว่าง 20–500 kg")]
+        public decimal? CurrentWeightKg { get; set; }
+
+        [Range(
+            20,
+            500,
+            ErrorMessage = "น้ำหนักเป้าหมายต้องอยู่ระหว่าง 20–500 kg")]
+        public decimal? GoalWeightKg { get; set; }
+
+        [Required(ErrorMessage = "กรุณาเลือกระดับกิจกรรม")]
+        public string ActivityLevel { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "กรุณาเลือกเป้าหมาย")]
+        public string FitnessGoal { get; set; } = string.Empty;
+
+        [Required]
+        public string Timezone { get; set; } = "Asia/Bangkok";
+    }
+}

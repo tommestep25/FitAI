@@ -1,0 +1,18 @@
+.onboarding-page {
+    min-height: calc(100vh - 64px);
+}
+
+.onboarding-card {
+    border-radius: 22px;
+}
+
+@media (max-width: 600px) {
+    .onboarding-page {
+        padding: 12px !important;
+    }
+
+    .onboarding-card {
+        padding: 20px !important;
+        border-radius: 16px;
+    }
+}
